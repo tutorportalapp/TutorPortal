@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1015">
+<title>Paper history | TutorPortal</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap masthead">
+    <div class="mast-left">
+      <p class="eyebrow">New South Wales · Mathematics Advanced</p>
+      <a class="brand" href="index.html">TutorPortal</a>
+    </div>
+    <div class="mast-right">
+      <p class="stats-line" id="mastStats"></p>
+      <div class="toolbar">
+        <a class="btn" href="library.html?focus=1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg> Search</a>
+        <span id="authSlot"><a class="btn primary" href="login.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg> Sign In</a></span>
+      </div>
+    </div>
+  </div>
+  <div class="nav-wrap"><div class="wrap"><nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="library.html">Library</a>
+      <a href="builder.html">Builder</a>
+      <a href="history.html" class="active">History</a>
+  </nav></div></div>
+</header>
+
+<main class="wrap" id="gate-main" hidden>
+  <section class="hist">
+    <p class="eyebrow">Paper history</p>
+    <h1 class="h-title">Recently built and completed papers</h1>
+    <div class="toolbar" style="margin:18px 0 8px">
+      <button class="btn" id="clrRecent">Clear recent</button>
+      <button class="btn" id="clrDone">Clear completed</button>
+      <button class="btn" id="clrAll">Clear all</button>
+    </div>
+
+    <div class="h-head"><p class="eyebrow">Recently built</p><span class="count" id="nRecent">0 items</span></div>
+    <div id="recent" class="h-list"></div>
+
+    <div class="h-head"><p class="eyebrow">Completed</p><span class="count" id="nDone">0 items</span></div>
+    <div id="done" class="h-list"></div>
+    <p class="msg" id="msg"></p>
+  </section>
+</main>
+
+<footer class="site-footer"><div class="wrap">TutorPortal is an independent tool for tutors. Not affiliated with NESA or any school.</div></footer>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let all = [];
+  const fmt = (iso) => new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  function row(r) {
+    const n = (r.settings.mc || []).length + (r.settings.wr || []).length;
+    const d = document.createElement('div');
+    d.className = 'h-row';
+    const t = document.createElement('div');
+    const a = document.createElement('a');
+    a.href = 'builder.html?paper=' + encodeURIComponent(r.id);
+    a.textContent = r.title || 'Untitled paper';
+    a.className = 'h-name';
+    const m = document.createElement('div');
+    m.className = 'msg';
+    m.textContent = `${n} questions · ${fmt(r.updated_at || r.created_at)}`;
+    t.append(a, m);
+    const acts = document.createElement('div');
+    acts.className = 'h-acts';
+    const mk = (label, fn) => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = label; b.onclick = fn; return b; };
+    acts.append(
+      mk(r.completed ? 'Undo complete' : 'Mark completed', async () => { await TP.papers.update(r.id, { completed: !r.completed, completed_at: r.completed ? null : new Date().toISOString() }); load(); }),
+      mk('Delete', async () => { await TP.papers.remove([r.id]); load(); })
+    );
+    d.append(t, acts);
+    return d;
+  }
+  function draw() {
+    const rec = all.filter((r) => !r.completed), done = all.filter((r) => r.completed);
+    for (const [box, list, label, cnt] of [['recent', rec, 'No recently built papers.', 'nRecent'], ['done', done, 'No completed papers yet.', 'nDone']]) {
+      $(box).replaceChildren(...(list.length ? list.map(row) : [Object.assign(document.createElement('p'), { className: 'msg empty', textContent: label })]));
+      $(cnt).textContent = `${list.length} item${list.length === 1 ? '' : 's'}`;
+    }
+  }
+  async function load() {
+    try { all = await TP.papers.list(); draw(); } catch { $('msg').textContent = 'Could not load your history.'; }
+  }
+  const clear = (pred) => async () => { await TP.papers.remove(all.filter(pred).map((r) => r.id)); load(); };
+  $('clrRecent').onclick = clear((r) => !r.completed);
+  $('clrDone').onclick = clear((r) => r.completed);
+  $('clrAll').onclick = clear(() => true);
+  TP.requireLogin().then(() => { $('gate-main').hidden = false; load(); });
+</script>
+</body>
+</html>

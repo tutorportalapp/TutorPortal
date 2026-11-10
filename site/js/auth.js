@@ -155,14 +155,6 @@
     el.textContent = `${papers} papers · ${units} questions · ${schools} ${schools === 1 ? 'school' : 'schools'}`;
   };
 
-  // Name printed on papers: profile display name, else the part of the email before the @. Editable in the builder.
-  TP.tutorName = async () => {
-    try { const v = localStorage.getItem('tp.tutor'); if (v) return v; } catch {}
-    if (TP.demo) return 'Demo Tutor';
-    const s = await TP.session().catch(() => null);
-    if (!s) return '';
-    return (s.user.user_metadata && s.user.user_metadata.display_name) || (s.user.email || '').split('@')[0];
-  };
   TP.papers = papers;
   window.TP = TP;
   document.addEventListener('DOMContentLoaded', TP.navState);

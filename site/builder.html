@@ -75,10 +75,6 @@
           <label for="title">Paper title</label>
           <input type="text" id="title" class="title-input" value="Mathematics Advanced Practice Paper">
         </div>
-        <div style="flex:0 1 200px">
-          <label for="tutor">Tutor name</label>
-          <input type="text" id="tutor" placeholder="Shown on the paper" maxlength="60">
-        </div>
         <label class="chip" style="margin:0"><input type="checkbox" id="showAns"> Include answers</label>
         <button class="btn" id="back">Back</button>
         <button class="btn" id="reshuffle">Shuffle again</button>
@@ -86,10 +82,7 @@
         <button class="btn primary" id="print">Print / save as PDF</button>
       </div>
       <p class="msg no-print" id="histMsg"></p>
-      <table class="frame">
-        <thead><tr><td><div class="ph" id="printTutor"></div></td></tr></thead>
-        <tbody><tr><td><article class="paper" id="paper"></article></td></tr></tbody>
-      </table>
+      <article class="paper" id="paper"></article>
     </section>
   </main>
 </div>
