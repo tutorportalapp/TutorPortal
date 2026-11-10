@@ -110,6 +110,51 @@
       }
     },
   };
+
+  TP.MODULES = {
+    'Functions & Algebra': ['Functions & Algebra', 'Exponentials & Logarithms'],
+    'Trigonometry': ['Trigonometry', 'Trigonometric Functions & Identities'],
+    'Calculus': ['Differentiation', 'Applications of Differentiation', 'Integration', 'Applications of Integration'],
+    'Sequences and Series': ['Sequences & Series', 'Financial Mathematics'],
+    'Probability and Statistics': ['Probability', 'Random Variables & Normal Distribution', 'Statistical Analysis'],
+  };
+
+  // Questions come from Supabase (logged-in users only). Local demo mode falls back to the sample JSON.
+  let dataPromise = null;
+  TP.loadData = () => (dataPromise ||= (async () => {
+    if (configured) {
+      const c = await load();
+      const page = async (table, col) => {
+        let out = [], from = 0;
+        for (;;) {
+          const { data, error } = await c.from(table).select(col).range(from, from + 999);
+          if (error) throw error;
+          out = out.concat(data);
+          if (data.length < 1000) return out;
+          from += 1000;
+        }
+      };
+      const rows = (await page('questions', 'data')).map((r) => r.data);
+      const diag = {};
+      for (const r of await page('diagrams', 'question_id,figures')) diag[r.question_id] = r.figures;
+      return [rows, diag];
+    }
+    return Promise.all([
+      fetch('data/questions.json').then((r) => r.json()),
+      fetch('data/diagrams.json').then((r) => r.json()).catch(() => ({})),
+    ]);
+  })());
+
+  // Top-right masthead line, e.g. "10 PAPERS · 640 QUESTIONS · 2 SCHOOLS".
+  TP.stats = (rows) => {
+    const el = document.getElementById('mastStats');
+    if (!el) return;
+    const papers = new Set(rows.map((r) => r.s + '|' + r.y)).size;
+    const units = new Set(rows.map((r) => [r.s, r.y, r.sec, r.q].join('|'))).size;
+    const schools = new Set(rows.map((r) => r.s)).size;
+    el.textContent = `${papers} papers · ${units} questions · ${schools} ${schools === 1 ? 'school' : 'schools'}`;
+  };
+
   TP.papers = papers;
   window.TP = TP;
   document.addEventListener('DOMContentLoaded', TP.navState);

@@ -61,39 +61,44 @@
       $(avail).textContent = `${n} available`;
     }
     $('build').disabled = mc.length + wr.length === 0;
+    if ($('availSummary')) $('availSummary').textContent = `${mc.length + wr.length} questions match your choices: ${mc.length} multiple choice and ${wr.length} written response.`;
   }
 
-  // ---- step 1 UI ----
+  // ---- sidebar UI ----
   function renderChoose() {
     const schools = [...new Set(ROWS.map((r) => r.s))].sort();
+    const wanted = new URLSearchParams(location.search).get('school');
     const box = $('schools');
     box.innerHTML = '';
     schools.forEach((s) => {
-      const inp = el('input', { type: 'checkbox', value: s, checked: '' });
+      const n = UNITS.filter((u) => u.school === s).length;
+      const inp = el('input', { type: 'checkbox', value: s });
+      inp.checked = !wanted || wanted === s;
       inp.addEventListener('change', refreshLimits);
-      box.append(el('label', { class: 'chip' }, inp, s));
+      box.append(el('label', { class: 'fitem' }, el('span', { class: 'l' }, inp, s), el('span', { class: 'n', text: String(n) })));
     });
 
     const topicsBox = $('topics');
     topicsBox.innerHTML = '';
+    const unitsWith = (t) => UNITS.filter((u) => u.parts.some((p) => p.t.includes(t))).length;
     for (const [mod, topics] of Object.entries(MODULES)) {
-      const count = el('small', { text: 'All topics' });
+      const count = el('small', { text: 'All' });
       const all = el('input', { type: 'checkbox' });
-      const inner = el('div', { class: 'inner' }, el('label', { class: 'opt all' }, all, 'Select all'));
+      const inner = el('div', { class: 'inner' }, el('label', { class: 'fitem all' }, el('span', { class: 'l' }, all, 'Select all')));
       const boxes = topics.map((t) => {
         const cb = el('input', { type: 'checkbox', class: 't', value: t });
-        inner.append(el('label', { class: 'opt' }, cb, t));
+        inner.append(el('label', { class: 'fitem' }, el('span', { class: 'l' }, cb, t), el('span', { class: 'n', text: String(unitsWith(t)) })));
         return cb;
       });
       const update = () => {
         const n = boxes.filter((b) => b.checked).length;
-        count.textContent = n === 0 ? 'All topics' : `${n} selected`;
+        count.textContent = n === 0 ? 'All' : `${n} chosen`;
         all.checked = n === boxes.length;
         refreshLimits();
       };
       all.addEventListener('change', () => { boxes.forEach((b) => (b.checked = all.checked)); update(); });
       boxes.forEach((b) => b.addEventListener('change', update));
-      topicsBox.append(el('details', { class: 'group' }, el('summary', {}, el('span', { text: mod }), count), inner));
+      topicsBox.append(el('details', { class: 'group' }, el('summary', {}, el('span', { class: 't', text: mod }), count), inner));
     }
     refreshLimits();
   }
@@ -230,9 +235,7 @@
     }
     $('choose').hidden = true;
     $('preview').hidden = false;
-    $('s1').classList.remove('on');
-    $('s2').classList.add('on');
-    window.scrollTo(0, 0);
+        window.scrollTo(0, 0);
   }
 
   // ---- wiring ----
@@ -244,8 +247,6 @@
     $('back').addEventListener('click', () => {
       $('preview').hidden = true;
       $('choose').hidden = false;
-      $('s2').classList.remove('on');
-      $('s1').classList.add('on');
     });
     $('showAns').addEventListener('change', () => { if (current) { renderPaper(); saveHistory(); } });
     let tt;
@@ -262,37 +263,13 @@
     $('print').addEventListener('click', () => window.print());
   }
 
-  // Questions come from Supabase (logged-in users only). Local demo mode falls back to the sample JSON.
-  async function loadData() {
-    if (TP.configured) {
-      const c = await TP.client();
-      const page = async (table, col) => {
-        let out = [], from = 0;
-        for (;;) {
-          const { data, error } = await c.from(table).select(col).range(from, from + 999);
-          if (error) throw error;
-          out = out.concat(data);
-          if (data.length < 1000) return out;
-          from += 1000;
-        }
-      };
-      const rows = (await page('questions', 'data')).map((r) => r.data);
-      const diag = {};
-      for (const r of await page('diagrams', 'question_id,figures')) diag[r.question_id] = r.figures;
-      return [rows, diag];
-    }
-    return Promise.all([
-      fetch('data/questions.json').then((r) => r.json()),
-      fetch('data/diagrams.json').then((r) => r.json()).catch(() => ({})),
-    ]);
-  }
-
   TP.requireLogin()
-    .then(() => { $('gate-main').hidden = false; return loadData(); })
+    .then(() => { $('gate-main').hidden = false; return TP.loadData(); })
     .then(([rows, diag]) => {
       ROWS = rows;
       DIAG = diag;
       buildUnits();
+      TP.stats(ROWS);
       renderChoose();
       wire();
       const open = new URLSearchParams(location.search).get('paper');
