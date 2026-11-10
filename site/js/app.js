@@ -130,7 +130,7 @@
   }
 
   // ---- history ----
-  const keysOf = (c) => ({ mc: c.mc.map((u) => u.key), wr: c.wr.map((u) => u.key), answers: $('showAns').checked });
+  const keysOf = (c) => ({ mc: c.mc.map((u) => u.key), wr: c.wr.map((u) => u.key), answers: $('showAns').checked, tutor: $('tutor').value });
   async function saveHistory() {
     const rec = { title: $('title').value, settings: keysOf(current), question_ids: [...current.mc, ...current.wr].flatMap((u) => u.parts.map((p) => p.id)) };
     try {
@@ -148,6 +148,7 @@
     currentId = rec.id;
     $('title').value = rec.title || $('title').value;
     $('showAns').checked = !!rec.settings.answers;
+    if (rec.settings.tutor) $('tutor').value = rec.settings.tutor;
     renderPaper();
     TP.papers.update(rec.id, {}).catch(() => {}); // bumps it to the top of recently built
     $('complete').textContent = rec.completed ? 'Completed' : 'Mark completed';
@@ -189,7 +190,7 @@
     const pieces = body.split(/\s(?=[A-D]\.\s)/);
     const stem = pieces.shift();
     const opts = el('div', { class: 'opts' });
-    pieces.forEach((o) => opts.append(el('div', { text: o })));
+    pieces.forEach((o) => opts.append(el('div', { class: 'opt' }, el('span', { class: 'oval', 'aria-hidden': 'true' }), el('span', { text: o }))));
     return el('div', { class: 'q' }, el('div', { class: 'qh' },
       el('div', { class: 'qn', text: `${n}.` }),
       el('div', { class: 'qb' }, el('div', { class: 'stem', text: stem }), ...figureEls(u.parts), opts)));
@@ -209,11 +210,22 @@
     return el('div', { class: 'q' }, el('div', { class: 'qh' }, el('div', { class: 'qn', text: `${n}.` }), body));
   }
 
+  // Tutor name: top left of the paper on screen, and on every printed page (see .print-tutor in the CSS).
+  function showTutor() {
+    const t = $('tutor').value.trim();
+    const label = t ? `Tutor: ${t}` : '';
+    if ($('paperTutor')) $('paperTutor').textContent = label;
+    $('printTutor').textContent = label;
+  }
+
   function renderPaper() {
     const paper = $('paper');
     paper.innerHTML = '';
     const mcMarks = current.mc.length;
     const wrMarks = current.wr.reduce((s, u) => s + totalMarks(u), 0);
+    paper.append(el('div', { class: 'paper-top' },
+      el('span', { class: 'tutor', id: 'paperTutor' }),
+      el('div', { class: 'name-box' }, el('span', { text: 'Name' }), el('span', { class: 'line' }))));
     paper.append(el('h1', { id: 'paperTitle', text: $('title').value }));
     paper.append(el('div', { class: 'meta', text: `${current.mc.length + current.wr.length} questions, ${mcMarks + wrMarks} marks` }));
 
@@ -233,6 +245,7 @@
         parts.forEach((p) => ol.append(el('li', { text: `Q${num}${p.p ? ' ' + p.p : ''}: ${p.a}` }))));
       paper.append(el('div', { class: 'answers' }, el('h2', { text: 'Answers' }), ol));
     }
+    showTutor();
     $('choose').hidden = true;
     $('preview').hidden = false;
         window.scrollTo(0, 0);
@@ -249,6 +262,11 @@
       $('choose').hidden = false;
     });
     $('showAns').addEventListener('change', () => { if (current) { renderPaper(); saveHistory(); } });
+    $('tutor').addEventListener('input', () => {
+      try { localStorage.setItem('tp.tutor', $('tutor').value.trim()); } catch {}
+      showTutor();
+      if (current) saveHistory();
+    });
     let tt;
     $('title').addEventListener('input', () => {
       const t = $('paperTitle'); if (t) t.textContent = $('title').value;
@@ -272,6 +290,7 @@
       TP.stats(ROWS);
       renderChoose();
       wire();
+      TP.tutorName().then((n) => { $('tutor').value = n; });
       const open = new URLSearchParams(location.search).get('paper');
       if (open) openSaved(open);
       $('loadMsg').textContent = `${UNITS.length} questions from ${new Set(ROWS.map((r) => r.s + r.y)).size} papers`;
