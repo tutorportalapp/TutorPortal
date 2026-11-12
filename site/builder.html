@@ -34,6 +34,9 @@
   <aside class="side no-print">
     <h4>School</h4>
     <div class="flist" id="schools"></div>
+    <h4>Difficulty</h4>
+    <p class="hint">Nothing ticked means every level.</p>
+    <div class="flist" id="levels"></div>
     <h4>Topics</h4>
     <p class="hint">Nothing ticked means every topic.</p>
     <div id="topics"></div>
@@ -45,7 +48,7 @@
     <!-- Settings -->
     <section id="choose" class="no-print">
       <h1 class="page-title">Build a paper</h1>
-      <p class="page-sub" id="availSummary">Choose schools and topics on the left, then how many questions you want.</p>
+      <p class="page-sub" id="availSummary">Choose schools, difficulty and topics on the left, then how many questions you want.</p>
       <div class="panel">
         <h2>How many questions</h2>
         <p class="hint">Limits adjust to what is available for your choices.</p>
@@ -73,7 +76,7 @@
       <div class="bar no-print" style="margin-bottom:16px">
         <div style="flex:1 1 320px;min-width:220px">
           <label for="title">Paper title</label>
-          <input type="text" id="title" class="title-input" value="Mathematics Advanced Practice Paper">
+          <input type="text" id="title" class="title-input" value="Mathematics Advanced">
         </div>
         <div style="flex:0 1 200px">
           <label for="tutor">Tutor name</label>
@@ -86,10 +89,8 @@
         <button class="btn primary" id="print">Print / save as PDF</button>
       </div>
       <p class="msg no-print" id="histMsg"></p>
-      <table class="frame">
-        <thead><tr><td><div class="ph" id="printTutor"></div></td></tr></thead>
-        <tbody><tr><td><article class="paper" id="paper"></article></td></tr></tbody>
-      </table>
+      <p class="msg no-print" id="paperMeta"></p>
+      <div class="pages-host"><div class="pages" id="pages"></div></div>
     </section>
   </main>
 </div>
@@ -98,6 +99,7 @@
 <footer class="site-footer"><div class="wrap">TutorPortal is an independent tool for tutors. Not affiliated with NESA or any school.</div></footer>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/render.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

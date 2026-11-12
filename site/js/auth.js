@@ -66,6 +66,43 @@
     },
   };
 
+
+  // Starred papers and questions. Supabase table `favourites` (kind 'paper'|'question', item_key) when connected;
+  // falls back to this browser's localStorage if the table is missing or in local demo mode.
+  // Keys: paper = "School|Year", question = "School|Year|Section|Q".
+  const FLS = 'tutorportal.favs';
+  const favs = {
+    set: { paper: new Set(), question: new Set() },
+    useLocal: !configured,
+    async load() {
+      const fromLocal = () => { try { const o = JSON.parse(localStorage.getItem(FLS) || '{}'); for (const k of ['paper', 'question']) favs.set[k] = new Set(o[k] || []); } catch {} };
+      if (!configured) { fromLocal(); return favs.set; }
+      try {
+        const c = await load();
+        const { data, error } = await c.from('favourites').select('kind,item_key');
+        if (error) throw error;
+        favs.set = { paper: new Set(), question: new Set() };
+        data.forEach((r) => favs.set[r.kind] && favs.set[r.kind].add(r.item_key));
+      } catch { favs.useLocal = true; fromLocal(); }
+      return favs.set;
+    },
+    has(kind, key) { return favs.set[kind].has(key); },
+    async toggle(kind, key) {
+      const on = !favs.set[kind].has(key);
+      on ? favs.set[kind].add(key) : favs.set[kind].delete(key);
+      const saveLocal = () => { try { localStorage.setItem(FLS, JSON.stringify({ paper: [...favs.set.paper], question: [...favs.set.question] })); } catch {} };
+      if (favs.useLocal) { saveLocal(); return on; }
+      try {
+        const c = await load();
+        const { error } = on
+          ? await c.from('favourites').upsert({ kind, item_key: key }, { onConflict: 'user_id,kind,item_key' })
+          : await c.from('favourites').delete().eq('kind', kind).eq('item_key', key);
+        if (error) throw error;
+      } catch { favs.useLocal = true; saveLocal(); }
+      return on;
+    },
+  };
+
   const TP = {
     configured,
     // Local-only preview so you can test the builder before Supabase is connected. Never active on the live site.
@@ -164,6 +201,7 @@
     return (s.user.user_metadata && s.user.user_metadata.display_name) || (s.user.email || '').split('@')[0];
   };
   TP.papers = papers;
+  TP.favs = favs;
   window.TP = TP;
   document.addEventListener('DOMContentLoaded', TP.navState);
 })();

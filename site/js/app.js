@@ -2,25 +2,9 @@
 // Data rows (one per question part): id, y(ear), s(chool), sec, q, p(art), m(arks), d(escription),
 // g(roups), t(opics), st, mt, cr, df (difficulty), oc, a(nswer), n(ote), x (question text).
 (() => {
-  const MODULES = {
-    'Functions & Algebra': ['Functions & Algebra', 'Exponentials & Logarithms'],
-    'Trigonometry': ['Trigonometry', 'Trigonometric Functions & Identities'],
-    'Calculus': ['Differentiation', 'Applications of Differentiation', 'Integration', 'Applications of Integration'],
-    'Sequences and Series': ['Sequences & Series', 'Financial Mathematics'],
-    'Probability and Statistics': ['Probability', 'Random Variables & Normal Distribution', 'Statistical Analysis'],
-  };
-
+  const { el, rich } = TPR;
+  const MODULES = TP.MODULES;
   const $ = (id) => document.getElementById(id);
-  const el = (tag, attrs = {}, ...kids) => {
-    const n = document.createElement(tag);
-    for (const [k, v] of Object.entries(attrs)) {
-      if (k === 'class') n.className = v;
-      else if (k === 'text') n.textContent = v;
-      else n.setAttribute(k, v);
-    }
-    kids.forEach((c) => n.append(c));
-    return n;
-  };
 
   let ROWS = [];
   let DIAG = {};
@@ -28,27 +12,20 @@
   let current = null; // { mc: [], wr: [] }
   let currentId = null; // history record for the paper on screen
 
-  // ---- data ----
-  const unitKey = (r) => `${r.s}|${r.y}|${r.sec}|${r.q}`;
-  function buildUnits() {
-    const map = new Map();
-    for (const r of ROWS) {
-      const k = unitKey(r);
-      if (!map.has(k)) map.set(k, { key: k, school: r.s, year: r.y, sec: r.sec, q: r.q, parts: [] });
-      map.get(k).parts.push(r);
-    }
-    UNITS = [...map.values()];
-  }
-
   // ---- selection state ----
-  const selectedSchools = () => [...document.querySelectorAll('#schools input:checked')].map((i) => i.value);
-  const selectedTopics = () => [...document.querySelectorAll('#topics input.t:checked')].map((i) => i.value);
+  const checked = (sel) => [...document.querySelectorAll(sel)].map((i) => i.value);
+  const selectedSchools = () => checked('#schools input:checked');
+  const selectedTopics = () => checked('#topics input.t:checked');
+  const selectedLevels = () => checked('#levels input:checked').map(Number);
 
   function eligible() {
     const schools = new Set(selectedSchools());
     const topics = new Set(selectedTopics());
+    const levels = new Set(selectedLevels());
     const ok = (u) =>
-      schools.has(u.school) && (topics.size === 0 || u.parts.some((p) => p.t.some((t) => topics.has(t))));
+      schools.has(u.school) &&
+      (topics.size === 0 || u.parts.some((p) => (p.t || []).some((t) => topics.has(t)))) &&
+      (levels.size === 0 || levels.has(TPR.level(u)));
     const pool = UNITS.filter(ok);
     return { mc: pool.filter((u) => u.sec === 'I'), wr: pool.filter((u) => u.sec === 'II') };
   }
@@ -78,9 +55,18 @@
       box.append(el('label', { class: 'fitem' }, el('span', { class: 'l' }, inp, s), el('span', { class: 'n', text: String(n) })));
     });
 
+    const lv = $('levels');
+    lv.innerHTML = '';
+    for (let d = 1; d <= 5; d++) {
+      const n = UNITS.filter((u) => TPR.level(u) === d).length;
+      const inp = el('input', { type: 'checkbox', value: String(d) });
+      inp.addEventListener('change', refreshLimits);
+      lv.append(el('label', { class: 'fitem' }, el('span', { class: 'l' }, inp, TPR.LEVELS[d]), el('span', { class: 'n', text: String(n) })));
+    }
+
     const topicsBox = $('topics');
     topicsBox.innerHTML = '';
-    const unitsWith = (t) => UNITS.filter((u) => u.parts.some((p) => p.t.includes(t))).length;
+    const unitsWith = (t) => UNITS.filter((u) => u.parts.some((p) => (p.t || []).includes(t))).length;
     for (const [mod, topics] of Object.entries(MODULES)) {
       const count = el('small', { text: 'All' });
       const all = el('input', { type: 'checkbox' });
@@ -112,8 +98,6 @@
     }
     return a;
   }
-  const avgDiff = (u) => u.parts.reduce((s, p) => s + p.df, 0) / u.parts.length;
-  const totalMarks = (u) => u.parts.reduce((s, p) => s + p.m, 0);
 
   function generate() {
     const { mc, wr } = eligible();
@@ -123,7 +107,7 @@
     current = {
       mc: pick(mc, nMC),
       // Section II is always ordered easy to hard
-      wr: pick(wr, nWR).sort((a, b) => avgDiff(a) - avgDiff(b) || totalMarks(a) - totalMarks(b)),
+      wr: pick(wr, nWR).sort((a, b) => TPR.avgDiff(a) - TPR.avgDiff(b) || TPR.totalMarks(a) - TPR.totalMarks(b)),
     };
     renderPaper();
     saveHistory();
@@ -154,122 +138,177 @@
     $('complete').textContent = rec.completed ? 'Completed' : 'Mark completed';
   }
 
-  // ---- text handling ----
-  const stripNumber = (x) => x.replace(/^Q\d+\.\s*/, '');
-  function splitMarks(x) {
-    const m = x.match(/\s*\[(\d+) marks?\]\s*$/);
-    return m ? [x.slice(0, m.index), Number(m[1])] : [x, null];
-  }
-  // Longest shared run of words across all parts of a question (the common stem).
-  function commonStem(texts) {
-    if (texts.length < 2) return ['', texts];
-    const words = texts.map((t) => t.split(/\s+/));
-    let i = 0;
-    while (words.every((w) => w[i] !== undefined && w[i] === words[0][i])) i++;
-    if (i < 6) return ['', texts];
-    const stem = words[0].slice(0, i).join(' ');
-    return [stem, words.map((w) => w.slice(i).join(' '))];
-  }
-  function figures(parts) {
-    const seen = new Set();
-    const out = [];
-    for (const p of parts) for (const f of DIAG[p.id] || []) if (!seen.has(f.svg)) { seen.add(f.svg); out.push(f); }
-    return out;
-  }
-  function figureEls(parts) {
-    return figures(parts).map((f) => {
-      const d = el('div');
-      d.innerHTML = f.svg; // our own stored SVGs
-      return d;
-    });
+  // ---- A4 paper ----
+  const BOOK = '<svg viewBox="0 0 48 48" width="46" height="46" fill="none" stroke="#111" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">' +
+    '<path d="M24 12c-4-3-10-4-17-4v28c7 0 13 1 17 4 4-3 10-4 17-4V8c-7 0-13 1-17 4z"/><path d="M24 12v28"/></svg>';
+
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const range = (a, b) => (a === b ? `${a}` : `${a}–${b}`);
+
+  // Time and marks follow from the questions chosen: 1 mark per multiple-choice question,
+  // about 1.5 min per Section I mark and 1.8 min per Section II mark (the HSC 180 min / 100 mark ratio).
+  function stats() {
+    const nMC = current.mc.length;
+    const wrMarks = current.wr.reduce((s, u) => s + TPR.totalMarks(u), 0);
+    const total = nMC + wrMarks;
+    const mcTime = nMC ? TPR.roundUp5(nMC * 1.5) : 0;
+    const wrTime = wrMarks ? TPR.roundUp5(wrMarks * 1.8) : 0;
+    return { nMC, nWR: current.wr.length, mcMarks: nMC, wrMarks, total, mcTime, wrTime, work: mcTime + wrTime, reading: Math.max(2, Math.round(total / 20)) };
   }
 
-  // ---- step 2 UI ----
-  function renderMC(u, n) {
-    const [body] = splitMarks(stripNumber(u.parts[0].x));
-    const pieces = body.split(/\s(?=[A-D]\.\s)/);
-    const stem = pieces.shift();
-    const opts = el('div', { class: 'opts' });
-    pieces.forEach((o) => opts.append(el('div', { class: 'opt' }, el('span', { class: 'oval', 'aria-hidden': 'true' }), el('span', { text: o }))));
-    return el('div', { class: 'q' }, el('div', { class: 'qh' },
-      el('div', { class: 'qn', text: `${n}.` }),
-      el('div', { class: 'qb' }, el('div', { class: 'stem', text: stem }), ...figureEls(u.parts), opts)));
-  }
-
-  function renderWR(u, n) {
-    const split = u.parts.map((p) => splitMarks(stripNumber(p.x)));
-    const [stem, rests] = commonStem(split.map((s) => s[0]));
-    const body = el('div', { class: 'qb' });
-    if (stem) body.append(el('div', { class: 'stem', text: stem }));
-    body.append(...figureEls(u.parts));
-    u.parts.forEach((p, i) => {
-      body.append(el('div', { class: 'part' },
-        el('div', { text: rests[i] }),
-        el('div', { class: 'marks', text: `[${p.m} mark${p.m === 1 ? '' : 's'}]` })));
-    });
-    return el('div', { class: 'q' }, el('div', { class: 'qh' }, el('div', { class: 'qn', text: `${n}.` }), body));
-  }
-
-  // Tutor name: top left of the paper on screen, and on every printed page (see .print-tutor in the CSS).
-  function showTutor() {
+  function coverPage(S, pageRange) {
     const t = $('tutor').value.trim();
-    const label = t ? `Tutor: ${t}` : '';
-    if ($('paperTutor')) $('paperTutor').textContent = label;
-    $('printTutor').textContent = label;
+    const title = $('title').value.trim() || 'Mathematics Advanced';
+    const sec = (name, marks, qs, time, pages, instr) => el('div', { class: 'cv-sec' },
+      el('div', { class: 'cv-sh' }, el('b', { text: name }), el('b', { text: `${plural(marks, 'mark')}` })),
+      el('ul', {}, ...instr.map((i) => el('li', { text: i }))),
+      el('div', { class: 'cv-pg', text: pages }));
+    const secs = [];
+    let first = 1;
+    if (S.nMC) {
+      secs.push(sec('Section I', S.mcMarks, '', '', `Pages ${pageRange.I}`, [
+        `Attempt ${S.nMC === 1 ? 'Question 1' : `Questions ${range(1, S.nMC)}`}`,
+        `Allow about ${TPR.duration(S.mcTime)} for this section`,
+        'Fill in the oval for the correct answer',
+      ]));
+      first = S.nMC + 1;
+    }
+    if (S.nWR) {
+      const last = S.nMC + S.nWR;
+      secs.push(sec('Section II', S.wrMarks, '', '', `Pages ${pageRange.II}`, [
+        `Attempt ${first === last ? `Question ${first}` : `Questions ${range(first, last)}`}`,
+        `Allow about ${TPR.duration(S.wrTime)} for this section`,
+        'Show relevant mathematical reasoning and/or calculations',
+      ]));
+    }
+    const page = el('section', { class: 'page cover' });
+    page.append(
+      el('div', { class: 'cv-top' },
+        (() => { const d = el('div', { class: 'cv-logo' }); d.innerHTML = BOOK; d.append(el('span', { text: t || 'Tutor' })); return d; })(),
+        el('div', { class: 'name-box' }, el('span', { text: 'Student Name:' }), el('span', { class: 'line' }))),
+      el('div', { class: 'cv-year', text: String(new Date().getFullYear()) }),
+      el('div', { class: 'cv-kicker', text: 'PRACTICE HIGHER SCHOOL CERTIFICATE EXAMINATION' }),
+      el('div', { class: 'cv-title', text: title }),
+      el('div', { class: 'cv-gen' },
+        el('h3', { text: 'General Instructions' }),
+        el('ul', {},
+          ...[
+            `Reading time – ${plural(S.reading, 'minute')}`,
+            `Working time – ${TPR.duration(S.work)}`,
+            'Write using black pen',
+            'Calculators approved by NESA may be used',
+          ].map((x) => el('li', { text: x })))),
+      el('div', { class: 'cv-total' }, el('b', { text: `Total marks: ${S.total}` })),
+      ...secs);
+    return page;
   }
 
   function renderPaper() {
-    const paper = $('paper');
-    paper.innerHTML = '';
-    const mcMarks = current.mc.length;
-    const wrMarks = current.wr.reduce((s, u) => s + totalMarks(u), 0);
-    paper.append(el('div', { class: 'paper-top' },
-      el('span', { class: 'tutor', id: 'paperTutor' }),
-      el('div', { class: 'name-box' }, el('span', { text: 'Name' }), el('span', { class: 'line' }))));
-    paper.append(el('h1', { id: 'paperTitle', text: $('title').value }));
-    paper.append(el('div', { class: 'meta', text: `${current.mc.length + current.wr.length} questions, ${mcMarks + wrMarks} marks` }));
+    $('choose').hidden = true;
+    $('preview').hidden = false; // must be visible so the page heights can be measured
+    const wrap = $('pages');
+    wrap.style.zoom = '1';
+    wrap.innerHTML = '';
+    const S = stats();
+    const tutor = $('tutor').value.trim();
+    const title = $('title').value.trim() || 'Mathematics Advanced';
 
+    // Content blocks in order; headings stay with the question that follows them.
+    const blocks = [];
     let n = 1;
     const answers = [];
     if (current.mc.length) {
-      paper.append(el('h2', { text: `Section I: Multiple choice (${mcMarks} mark${mcMarks === 1 ? '' : 's'})` }));
-      current.mc.forEach((u) => { paper.append(renderMC(u, n)); answers.push([n, u.parts]); n++; });
+      blocks.push({ el: el('h2', { class: 'sec-h', text: `Section I – ${plural(S.mcMarks, 'mark')}` }) });
+      blocks.push({ el: el('p', { class: 'sec-note', text: `Questions 1–${S.nMC}. Fill in the oval for the correct answer.` }), glue: true });
+      current.mc.forEach((u) => { const e = TPR.renderMC(u, n, DIAG); e.dataset.sec = 'I'; blocks.push({ el: e }); answers.push([n, u.parts]); n++; });
     }
     if (current.wr.length) {
-      paper.append(el('h2', { text: `Section II: Written response (${wrMarks} marks)` }));
-      current.wr.forEach((u) => { paper.append(renderWR(u, n)); answers.push([n, u.parts]); n++; });
+      blocks.push({ el: el('h2', { class: 'sec-h', text: `Section II – ${plural(S.wrMarks, 'mark')}` }) });
+      blocks.push({ el: el('p', { class: 'sec-note', text: 'Show relevant mathematical reasoning and/or calculations.' }), glue: true });
+      current.wr.forEach((u) => { const e = TPR.renderWR(u, n, DIAG); e.dataset.sec = 'II'; blocks.push({ el: e }); answers.push([n, u.parts]); n++; });
     }
+
+    const pages = [];
+    let body = null;
+    const newPage = () => {
+      const p = el('section', { class: 'page' },
+        el('div', { class: 'ph' }, el('span', { text: tutor ? `Tutor: ${tutor}` : '' }), el('span', { text: title })),
+        el('div', { class: 'pbody' }),
+        el('div', { class: 'pf' }));
+      wrap.append(p);
+      pages.push(p);
+      body = p.querySelector('.pbody');
+    };
+    const place = (b) => {
+      body.append(b.el);
+      if (body.scrollHeight > body.clientHeight + 1 && body.children.length > 1) {
+        body.removeChild(b.el);
+        const moved = [b.el];
+        // a heading (and its note) never sits alone at the foot of a page
+        while (body.lastElementChild && (body.lastElementChild.classList.contains('sec-h') || body.lastElementChild.classList.contains('sec-note'))) {
+          moved.unshift(body.lastElementChild);
+          body.removeChild(body.lastElementChild);
+        }
+        newPage();
+        moved.forEach((m) => body.append(m));
+      }
+    };
+
+    wrap.append(el('div')); // placeholder for the cover, filled once page numbers are known
+    const coverSlot = wrap.firstChild;
+    newPage();
+    blocks.forEach(place);
     if ($('showAns').checked) {
-      const ol = el('ul', { style: 'list-style:none;padding:0' });
-      answers.forEach(([num, parts]) =>
-        parts.forEach((p) => ol.append(el('li', { text: `Q${num}${p.p ? ' ' + p.p : ''}: ${p.a}` }))));
-      paper.append(el('div', { class: 'answers' }, el('h2', { text: 'Answers' }), ol));
+      newPage();
+      place({ el: el('h2', { class: 'sec-h', text: 'Answers' }) });
+      answers.forEach(([num, parts]) => parts.forEach((p) => place({ el: el('div', { class: 'ans', text: `Q${num}${p.p ? ' ' + p.p : ''}: ${p.a}` }) })));
     }
-    showTutor();
-    $('choose').hidden = true;
-    $('preview').hidden = false;
-        window.scrollTo(0, 0);
+
+    // page ranges for the cover (the cover is page 1)
+    const pageRange = {};
+    for (const s of ['I', 'II']) {
+      const idx = pages.map((p, i) => [p, i + 2]).filter(([p]) => p.querySelector(`[data-sec="${s}"]`)).map(([, i]) => i);
+      if (idx.length) pageRange[s] = range(idx[0], idx[idx.length - 1]);
+    }
+    coverSlot.replaceWith(coverPage(S, pageRange));
+    const total = pages.length + 1;
+    wrap.querySelectorAll('.pf').forEach((f, i) => { f.textContent = `Page ${i + 2} of ${total}`; });
+
+    $('paperMeta').textContent = `${S.nMC + S.nWR} questions · ${S.total} marks · working time ${TPR.duration(S.work)} · ${total} A4 pages`;
+    fit();
+  }
+
+  // shrink the A4 pages to fit narrow screens (printing always uses full size)
+  function fit() {
+    const wrap = $('pages');
+    if (!wrap.firstElementChild) return;
+    wrap.style.zoom = '1';
+    const full = wrap.firstElementChild.offsetWidth;
+    const avail = wrap.parentElement.clientWidth;
+    wrap.style.zoom = String(Math.min(1, avail / full));
   }
 
   // ---- wiring ----
   function wire() {
     $('nMC').addEventListener('input', refreshLimits);
     $('nWR').addEventListener('input', refreshLimits);
-    $('build').addEventListener('click', () => { currentId = null; generate(); });
+    $('build').addEventListener('click', () => { currentId = null; generate(); window.scrollTo(0, 0); });
     $('reshuffle').addEventListener('click', generate);
     $('back').addEventListener('click', () => {
       $('preview').hidden = true;
       $('choose').hidden = false;
     });
     $('showAns').addEventListener('change', () => { if (current) { renderPaper(); saveHistory(); } });
+    let rt;
+    const redraw = () => { clearTimeout(rt); rt = setTimeout(() => current && renderPaper(), 250); };
     $('tutor').addEventListener('input', () => {
       try { localStorage.setItem('tp.tutor', $('tutor').value.trim()); } catch {}
-      showTutor();
+      redraw();
       if (current) saveHistory();
     });
     let tt;
     $('title').addEventListener('input', () => {
-      const t = $('paperTitle'); if (t) t.textContent = $('title').value;
+      redraw();
       clearTimeout(tt); tt = setTimeout(() => currentId && TP.papers.update(currentId, { title: $('title').value }).catch(() => {}), 600);
     });
     $('complete').addEventListener('click', async () => {
@@ -278,7 +317,8 @@
       await TP.papers.update(currentId, { completed: done, completed_at: done ? new Date().toISOString() : null }).catch(() => {});
       $('complete').textContent = done ? 'Completed' : 'Mark completed';
     });
-    $('print').addEventListener('click', () => window.print());
+    $('print').addEventListener('click', () => { $('pages').style.zoom = '1'; window.print(); setTimeout(fit, 300); });
+    window.addEventListener('resize', fit);
   }
 
   TP.requireLogin()
@@ -286,7 +326,7 @@
     .then(([rows, diag]) => {
       ROWS = rows;
       DIAG = diag;
-      buildUnits();
+      UNITS = TPR.buildUnits(ROWS);
       TP.stats(ROWS);
       renderChoose();
       wire();

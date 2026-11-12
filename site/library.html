@@ -31,41 +31,74 @@
 </header>
 
 <div class="searchrow no-print"><div class="wrap">
-  <input type="text" id="q" placeholder="Filter by school or year, e.g. Abbotsleigh 2023" autocomplete="off" aria-label="Filter papers">
+  <input type="text" id="q" placeholder="Search, e.g. Abbotsleigh 2023 or chain rule" autocomplete="off" aria-label="Search papers and questions">
   <a class="btn primary" href="builder.html">Build a paper</a>
 </div></div>
 
 <div class="shell" id="gate-main" hidden>
   <aside class="side">
-    <h4>Year</h4>
-    <div class="flist" id="fYear"></div>
-    <h4>School</h4>
-    <div class="flist" id="fSchool"></div>
-    <h4>Topic</h4>
-    <div class="flist" id="fTopic"></div>
+    <label for="fSchool">School</label>
+    <select id="fSchool"></select>
+    <label for="fYear">Year</label>
+    <select id="fYear"></select>
+    <label for="fTopic">Topic</label>
+    <select id="fTopic"></select>
+    <label for="fLevel">Difficulty</label>
+    <select id="fLevel"></select>
+    <div id="typeBox">
+      <label for="fType">Question type</label>
+      <select id="fType">
+        <option value="">All types</option>
+        <option value="I">Multiple choice</option>
+        <option value="II">Written response</option>
+      </select>
+    </div>
+    <label class="starred"><input type="checkbox" id="fStar"> <span>Starred only</span></label>
+    <p style="margin:14px 0 0"><button class="btn" id="reset" style="width:100%">Clear filters</button></p>
   </aside>
 
   <main class="main">
     <p class="crumb"><a href="index.html">TutorPortal</a> / Library</p>
     <h1 class="page-title">Maths Advanced</h1>
-    <p class="page-sub" id="sub">Loading papers...</p>
-    <div class="statstrip" id="strip"></div>
-    <div class="controls">
-      <div class="seg" id="sort">
-        <button data-s="school" class="on">By school</button>
-        <button data-s="year">By year</button>
-        <button data-s="newest">Newest first</button>
+    <p class="page-sub" id="sub">Loading...</p>
+    <div class="tabs">
+      <div class="seg" id="view">
+        <button data-v="papers" class="on">Papers</button>
+        <button data-v="questions">Questions</button>
       </div>
       <span class="msg" id="shown"></span>
     </div>
-    <div class="idx-head"><span>№</span><span>School &amp; year</span><span>Questions</span><span>Marks</span><span></span></div>
-    <div id="list"></div>
+
+    <!-- Papers -->
+    <section id="papersView">
+      <div class="statstrip" id="strip"></div>
+      <div class="controls">
+        <div class="seg" id="sort">
+          <button data-s="school" class="on">By school</button>
+          <button data-s="year">By year</button>
+          <button data-s="newest">Newest first</button>
+        </div>
+      </div>
+      <div class="idx-head"><span></span><span>№</span><span>School &amp; year</span><span>Questions</span><span>Marks</span><span></span></div>
+      <div id="list"></div>
+    </section>
+
+    <!-- Questions -->
+    <section id="questionsView" hidden>
+      <div class="controls">
+        <button class="btn" id="shuffle">Shuffle questions</button>
+        <button class="btn" id="unshuffle" hidden>Back to paper order</button>
+      </div>
+      <div id="qlist"></div>
+      <div class="pager" id="pager"></div>
+    </section>
   </main>
 </div>
 
 <footer class="site-footer"><div class="wrap">TutorPortal is an independent tool for tutors. Not affiliated with NESA or any school.</div></footer>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/render.js"></script>
 <script src="js/library.js"></script>
 </body>
 </html>
