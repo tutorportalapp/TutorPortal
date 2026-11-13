@@ -130,7 +130,7 @@
   }
 
   // n = question number to show, or null for no number (library cards).
-  function renderMC(u, n, diag) {
+  function legacyMC(u, n, diag) {
     const [body] = splitMarks(stripNumber(u.parts[0].x));
     const pieces = body.split(/\s(?=[A-D]\.\s)/);
     const stem = pieces.shift();
@@ -143,7 +143,7 @@
   // Working lines after a written part: more marks and harder questions get more room.
   const linesFor = (p) => Math.min(14, Math.max(2, Math.round((p.m || 1) * (1 + 0.2 * ((p.df || 1) - 1))) + 1));
 
-  function renderWR(u, n, diag, opts = {}) {
+  function legacyWR(u, n, diag, opts = {}) {
     const split = u.parts.map((p) => splitMarks(stripNumber(p.x)));
     const [stem, rests] = commonStem(split.map((s) => s[0]));
     const body = el('div', { class: 'qb' });
@@ -156,6 +156,43 @@
     });
     return el('div', { class: 'q' }, el('div', { class: 'qh' }, ...(n != null ? [el('div', { class: 'qn', text: `${n}.` })] : []), body));
   }
+  if (window.PaperRender) PaperRender.injectStyles();
+
+  // ---- structured rendering via paper-render.js: grouped parts (a)/(i), shared stems, diagrams placed with the right part ----
+  const diagCache = new WeakMap();
+  function diagIndex(diag) {
+    if (!diagCache.has(diag)) {
+      const figs = new Map(); // one figure covering several parts becomes one entry listing all their ids
+      for (const [id, list] of Object.entries(diag || {})) for (const f of list) {
+        const k = `${f.label}\u0000${f.svg}`;
+        if (!figs.has(k)) figs.set(k, { label: f.label, svg: f.svg, ids: [] });
+        figs.get(k).ids.push(id);
+      }
+      diagCache.set(diag, window.PaperRender.indexDiagrams([...figs.values()]));
+    }
+    return diagCache.get(diag);
+  }
+  // paper-render hands us escaped text and wants HTML back: decode, then apply fractions, superscripts and symbols.
+  const decode = (s) => new DOMParser().parseFromString(s, 'text/html').body.textContent;
+  const formatMath = (escaped) => { const d = document.createElement('div'); d.append(rich(decode(escaped))); return d.innerHTML; };
+
+  function renderStructured(u, n, diag, opts = {}) {
+    const rows = u.parts.map((p) => ({ id: p.id, section: p.sec, marks: p.m, text: p.x }));
+    const byId = Object.fromEntries(u.parts.map((p) => [p.id, p]));
+    const html = window.PaperRender.renderQuestion(window.PaperRender.groupQuestions(rows)[0], diagIndex(diag), n, {
+      formatMath, ovals: true,
+      afterPart: opts.lines ? (id) => `<div class="lines" aria-hidden="true">${'<i></i>'.repeat(linesFor(byId[id] || {}))}</div>` : null,
+    });
+    const d = el('div', { class: 'q' });
+    d.innerHTML = html;
+    return d;
+  }
+  const withFallback = (fn, legacy) => (u, n, diag, opts) => {
+    try { if (window.PaperRender) return fn(u, n, diag, opts); } catch (e) { console.warn('Structured render failed, using simple layout:', u.key, e.message); }
+    return legacy(u, n, diag, opts);
+  };
+  const renderMC = withFallback(renderStructured, legacyMC);
+  const renderWR = withFallback(renderStructured, legacyWR);
   const renderUnit = (u, n, diag, opts) => (u.sec === 'I' ? renderMC(u, n, diag) : renderWR(u, n, diag, opts));
 
   // e.g. "Q7", "Q14 (a)-(c)"

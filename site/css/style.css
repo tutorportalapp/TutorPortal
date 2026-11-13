@@ -336,3 +336,9 @@ details.group .fitem.all { color: var(--accent); }
 
 .page.ref { padding: 0; }
 .page.ref img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* structured question layout (paper-render.js) */
+.q .pq { margin: 0; }
+.q .pq-marks { font-family: system-ui, sans-serif; color: #555; }
+.q .pq-fig svg { max-height: 280px; }
+.q .pq-oval { color: #111; }
