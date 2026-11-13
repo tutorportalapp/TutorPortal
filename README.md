@@ -60,3 +60,17 @@ npm run dev
 5. Commit `data/Master_Question_Database.xlsx` and push. The workflow loads questions into Supabase and deletes `site/data` before deploying.
 
 Local preview with no keys set runs in demo mode (sample questions, no login) on localhost only.
+
+## NESA reference sheet (optional)
+
+The builder's "NESA reference sheet" option draws NESA's own PDF onto A4 pages at the back of the paper.
+NESA does not allow it to be fetched automatically, so add it once yourself:
+
+1. Download "Mathematics Advanced, Extension 1 and 2 Reference Sheet" from
+   https://www.nsw.gov.au/education-and-training/nesa/curriculum/hsc-exam-papers/mathematics-advanced-extension-reference-sheet
+2. Save it as `site/assets/reference-sheet.pdf` (create the `assets` folder inside `site`), then commit and push.
+
+## Contact messages and "last updated"
+
+Run `supabase/setup.sql` in the Supabase SQL Editor (it is safe to re-run). Messages sent from the home page appear
+in Supabase under Table Editor > `contact_messages`.

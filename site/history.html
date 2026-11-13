@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#0e1015">
 <title>Paper history | TutorPortal</title>
 <link rel="stylesheet" href="css/style.css">
+<script src="js/ui.js"></script>
 </head>
 <body>
 <header class="site-header">
@@ -82,7 +83,10 @@
   function draw() {
     const rec = all.filter((r) => !r.completed), done = all.filter((r) => r.completed);
     for (const [box, list, label, cnt] of [['recent', rec, 'No recently built papers.', 'nRecent'], ['done', done, 'No completed papers yet.', 'nDone']]) {
-      $(box).replaceChildren(...(list.length ? list.map(row) : [Object.assign(document.createElement('p'), { className: 'msg empty', textContent: label })]));
+      const empty = box === 'recent'
+        ? TPUI.empty('Your history is empty', 'Papers you build appear here so you can reprint them later.', [{ label: 'Build your first paper', href: 'builder.html', primary: true }])
+        : TPUI.empty('No completed papers yet', 'Mark a paper as completed once a student has finished it.');
+      $(box).replaceChildren(...(list.length ? list.map(row) : [empty]));
       $(cnt).textContent = `${list.length} item${list.length === 1 ? '' : 's'}`;
     }
   }

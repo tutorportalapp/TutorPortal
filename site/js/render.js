@@ -19,6 +19,9 @@
     const flush = () => { if (buf) { frag.append(document.createTextNode(buf)); buf = ''; } };
     for (let i = 0; i < text.length; i++) {
       const c = text[i];
+      if (c === '_' && /[A-Za-z]/.test(text[i - 1] || '') && /[A-Za-z0-9\u221e]/.test(text[i + 1] || '')) {
+        flush(); frag.append(el('sub', { text: text[i + 1] })); i++; continue; // log_a, T_n, S_∞
+      }
       if (c !== '^') { buf += c; continue; }
       let sup = null, end = i + 1;
       if (text[i + 1] === '(') {
@@ -44,8 +47,8 @@
 
   // "a/b" is a fraction: stacked with a bar. Operands are runs of numbers/letters/brackets/powers, e.g. sqrt(3)/2, d^2y/dx^2, 8/(1 - 2x).
   const GRP = '\\((?:[^()]|\\([^()]*\\))*\\)';
-  const SUP = '(?:\\^(?:-?[A-Za-z0-9]+|' + GRP + '))?';
-  const UNIT = '(?:(?:\\d+\\.)?[A-Za-z0-9]+(?![A-Za-z0-9])|' + GRP + ')' + SUP; // words are maximal, so the pattern cannot backtrack badly
+  const SUP = '(?:\\^(?:-?[A-Za-z0-9\\u0370-\\u03ff]+|' + GRP + '))?';
+  const UNIT = '(?:(?:\\d+\\.)?[A-Za-z0-9\\u0370-\\u03ff]+(?![A-Za-z0-9\\u0370-\\u03ff])|' + GRP + ')' + SUP; // words are maximal, so the pattern cannot backtrack badly
   const FRAC_SRC = ('(-?(?:' + UNIT + ')+)/(-?(?:' + UNIT + ')+)');
   const NOT_FRAC = new Set(['and/or', 'his/her', 'he/she', 'true/false', 'yes/no']);
   const unwrap = (t) => {
@@ -58,6 +61,7 @@
     return t.slice(1, -1);
   };
   function rich(text) {
+    text = text.replace(/<=/g, '\u2264').replace(/>=/g, '\u2265');
     const frag = document.createDocumentFragment();
     let last = 0, m;
     const FRAC = new RegExp(FRAC_SRC, 'g'); // per call: rich() recurses
@@ -118,6 +122,8 @@
       seen.add(f.svg);
       const d = el('div', { class: 'fig' });
       d.innerHTML = f.svg; // our own stored SVGs
+      d.setAttribute('role', 'img');
+      d.setAttribute('aria-label', f.label ? `Diagram: ${f.label}` : 'Diagram for this question');
       out.push(d);
     }
     return out;
@@ -134,7 +140,10 @@
     return el('div', { class: 'q' }, el('div', { class: 'qh' }, ...(n != null ? [el('div', { class: 'qn', text: `${n}.` })] : []), qb));
   }
 
-  function renderWR(u, n, diag) {
+  // Working lines after a written part: more marks and harder questions get more room.
+  const linesFor = (p) => Math.min(14, Math.max(2, Math.round((p.m || 1) * (1 + 0.2 * ((p.df || 1) - 1))) + 1));
+
+  function renderWR(u, n, diag, opts = {}) {
     const split = u.parts.map((p) => splitMarks(stripNumber(p.x)));
     const [stem, rests] = commonStem(split.map((s) => s[0]));
     const body = el('div', { class: 'qb' });
@@ -143,10 +152,11 @@
     u.parts.forEach((p, i) => {
       body.append(el('div', { class: 'part' }, richEl('div', '', rests[i]),
         el('div', { class: 'marks', text: `[${p.m} mark${p.m === 1 ? '' : 's'}]` })));
+      if (opts.lines) body.append(el('div', { class: 'lines', 'aria-hidden': 'true' }, ...Array.from({ length: linesFor(p) }, () => el('i'))));
     });
     return el('div', { class: 'q' }, el('div', { class: 'qh' }, ...(n != null ? [el('div', { class: 'qn', text: `${n}.` })] : []), body));
   }
-  const renderUnit = (u, n, diag) => (u.sec === 'I' ? renderMC(u, n, diag) : renderWR(u, n, diag));
+  const renderUnit = (u, n, diag, opts) => (u.sec === 'I' ? renderMC(u, n, diag) : renderWR(u, n, diag, opts));
 
   // e.g. "Q7", "Q14 (a)-(c)"
   function partLabel(u) {
@@ -165,5 +175,5 @@
   const roundUp5 = (n) => Math.max(5, Math.ceil(n / 5) * 5);
 
   window.TPR = { el, rich, stripNumber, splitMarks, commonStem, unitKey, buildUnits, totalMarks, avgDiff, level, LEVELS,
-    topicsOf, subtopicsOf, figureEls, renderMC, renderWR, renderUnit, partLabel, duration, roundUp5 };
+    topicsOf, subtopicsOf, figureEls, renderMC, renderWR, renderUnit, linesFor, partLabel, duration, roundUp5 };
 })();

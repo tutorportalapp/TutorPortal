@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#0e1015">
 <title>Library | TutorPortal</title>
 <link rel="stylesheet" href="css/style.css">
+<script src="js/ui.js"></script>
 </head>
 <body>
 <header class="site-header">
@@ -37,7 +38,7 @@
 
 <div class="shell" id="gate-main" hidden>
   <aside class="side">
-    <label class="starred" id="starBox"><input type="checkbox" id="fStar"> <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg> <span>Starred only</span></label>
+    <button type="button" class="starred" id="starBox" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg> <span>Starred only</span></button>
     <div id="filters"></div>
     <h4>Topics</h4>
     <div id="topics"></div>
@@ -47,18 +48,18 @@
   <main class="main">
     <p class="page-sub" id="sub">Loading...</p>
     <div class="tabs">
-      <div class="seg" id="view">
+      <div class="seg" id="view" role="group" aria-label="Library section">
         <button data-v="papers" class="on">Papers</button>
         <button data-v="questions">Questions</button>
       </div>
-      <span class="msg" id="shown"></span>
+      <span class="msg" id="shown" aria-live="polite"></span>
     </div>
 
     <!-- Papers -->
     <section id="papersView">
       <div class="statstrip" id="strip"></div>
       <div class="controls">
-        <div class="seg" id="sort">
+        <div class="seg" id="sort" role="group" aria-label="Sort papers">
           <button data-s="school" class="on">By school</button>
           <button data-s="year">By year</button>
         </div>

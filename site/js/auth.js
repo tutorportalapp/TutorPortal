@@ -189,7 +189,26 @@
     const papers = new Set(rows.map((r) => r.s + '|' + r.y)).size;
     const units = new Set(rows.map((r) => [r.s, r.y, r.sec, r.q].join('|'))).size;
     const schools = new Set(rows.map((r) => r.s)).size;
-    el.textContent = `${papers} papers · ${units} questions · ${schools} ${schools === 1 ? 'school' : 'schools'}`;
+    const base = `${papers} papers · ${units} questions · ${schools} ${schools === 1 ? 'school' : 'schools'}`;
+    el.textContent = base;
+    TP.meta().then((m) => { if (m && m.updated) el.textContent = `${base} · Updated ${fmtDate(m.updated)}`; });
+  };
+
+  // "Last updated" note: the sync job records when the question bank last changed (table site_meta).
+  const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  TP.meta = async () => {
+    try {
+      if (!configured) return null;
+      const c = await load();
+      const { data, error } = await c.from('site_meta').select('value').eq('key', 'content').maybeSingle();
+      return error ? null : data && data.value;
+    } catch { return null; }
+  };
+  // Same line for signed-out pages (home), from the counts the sync job stored.
+  TP.metaLine = async () => {
+    const m = await TP.meta();
+    if (!m || !m.papers) return '';
+    return `${m.papers} papers · ${m.questions} questions · ${m.schools} ${m.schools === 1 ? 'school' : 'schools'} · Updated ${fmtDate(m.updated)}`;
   };
 
   // Name printed on papers: profile display name, else the part of the email before the @. Editable in the builder.

@@ -104,8 +104,8 @@
   }
 
   // ---- star button ----
-  function starBtn(kind, key) {
-    const b = el('button', { class: 'star' + (TP.favs.has(kind, key) ? ' on' : ''), type: 'button', 'aria-label': 'Star', 'aria-pressed': String(TP.favs.has(kind, key)) });
+  function starBtn(kind, key, what) {
+    const b = el('button', { class: 'star' + (TP.favs.has(kind, key) ? ' on' : ''), type: 'button', 'aria-label': `Star ${what}`, title: 'Star', 'aria-pressed': String(TP.favs.has(kind, key)) });
     b.innerHTML = STAR;
     b.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -117,6 +117,15 @@
     return b;
   }
 
+  function emptyFor(what) {
+    const reset = () => { for (const k of ['school', 'year', 'topic', 'level', 'type']) f[k].clear(); Object.assign(f, { star: false, text: '', page: 0 }); sync(); draw(); };
+    const noFilters = !f.text && ['school', 'year', 'topic', 'level', 'type'].every((k) => f[k].size === 0);
+    if (f.star && noFilters) {
+      return TPUI.empty(`No starred ${what} yet`, `Click the star beside a ${what === 'papers' ? 'paper' : 'question'} to save it here for next time.`, [{ label: `Show all ${what}`, onClick: reset, primary: true }]);
+    }
+    return TPUI.empty(`No ${what} match those filters`, 'Try removing a filter or searching for something broader.', [{ label: 'Clear filters', onClick: reset, primary: true }]);
+  }
+
   // ---- papers view ----
   function drawPapers() {
     const list = PAPERS.filter(paperOk);
@@ -126,11 +135,11 @@
     $('strip').innerHTML = [['Papers', list.length], ['Questions', qs], ['Schools', new Set(list.map((p) => p.school)).size], ['Years covered', range]]
       .map(([l, v]) => `<div class="stat"><span>${l}</span><b>${v}</b></div>`).join('');
     $('shown').textContent = `Showing ${list.length} of ${PAPERS.length} papers`;
-    $('sort').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.s === f.sort));
+    $('sort').querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.s === f.sort); b.setAttribute('aria-pressed', String(b.dataset.s === f.sort)); });
 
     const L = $('list');
     L.innerHTML = '';
-    if (!list.length) { L.append(el('p', { class: 'empty', text: f.star ? 'No starred papers match those filters.' : 'No papers match those filters.' })); return; }
+    if (!list.length) { L.append(emptyFor('papers')); return; }
     const bySchool = f.sort === 'school';
     const sorted = list.slice().sort((a, b) =>
       f.sort === 'year' ? a.year - b.year || a.school.localeCompare(b.school)
@@ -145,7 +154,7 @@
       n++;
       const isOpen = openKey === p.key;
       const row = el('div', { class: 'irow' + (isOpen ? ' open' : ''), role: 'button', tabindex: '0', 'aria-expanded': String(isOpen) },
-        starBtn('paper', p.key),
+        starBtn('paper', p.key, `${p.school} ${p.year}`),
         el('span', { class: 'yr', text: bySchool ? String(p.year) : String(n).padStart(2, '0') }),
         el('span', { class: 'nm', text: `${p.school} ${p.year}` }),
         el('span', { class: 'c', text: `${p.units.length} questions` }),
@@ -183,7 +192,7 @@
     u.topics.forEach((t) => tags.append(el('span', { class: 'badge topic', text: t })));
     tags.append(dots);
     return el('article', { class: 'qcard' },
-      el('div', { class: 'qc-head' }, meta, starBtn('question', u.key)),
+      el('div', { class: 'qc-head' }, meta, starBtn('question', u.key, `${u.school} ${u.year} ${TPR.partLabel(u)}`)),
       tags,
       el('div', { class: 'qpaper' }, TPR.renderUnit(u, null, DIAG)));
   }
@@ -199,7 +208,7 @@
     $('unshuffle').hidden = !rank;
     const L = $('qlist');
     L.innerHTML = '';
-    if (!list.length) L.append(el('p', { class: 'empty', text: f.star ? 'No starred questions match those filters.' : 'No questions match those filters.' }));
+    if (!list.length) L.append(emptyFor('questions'));
     list.slice(f.page * PAGE, f.page * PAGE + PAGE).forEach((u) => L.append(card(u)));
 
     const P = $('pager');
@@ -221,23 +230,25 @@
     $('papersView').hidden = q;
     $('questionsView').hidden = !q;
     $('typeBox').hidden = !q;
-    $('view').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === f.view));
+    $('view').querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.v === f.view); b.setAttribute('aria-pressed', String(b.dataset.v === f.view)); });
     $('sub').textContent = q
       ? 'Every question in the database. Star the ones you like and filter to your starred list.'
       : 'Past trial papers in the database. Click a paper for details, or use the filters to narrow the list.';
     q ? drawQuestions() : drawPapers();
   }
 
+  const setStarBox = () => { $('starBox').classList.toggle('on', f.star); $('starBox').setAttribute('aria-pressed', String(f.star)); };
+
   // keep the filter boxes showing the state (e.g. after "View its questions")
   const sync = () => {
     boxes.forEach((b) => (b.input.checked = f[b.key].has(b.value)));
-    $('fStar').checked = f.star; $('q').value = f.text;
-    $('starBox').classList.toggle('on', f.star);
+    $('q').value = f.text;
+    setStarBox();
     refresh();
   };
 
   function wire() {
-    $('fStar').addEventListener('change', () => { f.star = $('fStar').checked; $('starBox').classList.toggle('on', f.star); f.page = 0; draw(); });
+    $('starBox').addEventListener('click', () => { f.star = !f.star; setStarBox(); f.page = 0; draw(); });
     $('q').addEventListener('input', () => { f.text = $('q').value; f.page = 0; draw(); });
     $('sort').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { f.sort = b.dataset.s; draw(); } });
     $('view').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { f.view = b.dataset.v; f.page = 0; draw(); } });

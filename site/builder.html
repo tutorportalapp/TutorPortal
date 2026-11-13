@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#0e1015">
 <title>Paper builder | TutorPortal</title>
 <link rel="stylesheet" href="css/style.css">
+<script src="js/ui.js"></script>
 </head>
 <body>
 <header class="site-header">
@@ -47,11 +48,16 @@
     <!-- Settings -->
     <section id="choose" class="no-print">
       <h1 class="page-title">Build a paper</h1>
-      <p class="page-sub" id="availSummary">Choose schools, difficulty and topics on the left, then how many questions you want.</p>
+      <p class="page-sub" id="availSummary" aria-live="polite">Choose schools, difficulty and topics on the left, then how many questions you want.</p>
       <div class="panel">
-        <h2>How many questions</h2>
-        <p class="hint">Limits adjust to what is available for your choices.</p>
-        <div class="row">
+        <h2>How should the paper be sized?</h2>
+        <p class="hint">Choose by number of questions, or set the marks or working time for each section. Limits adjust to what is available for your choices.</p>
+        <div class="seg" id="mode" role="group" aria-label="Size the paper by">
+          <button data-m="count" class="on" aria-pressed="true">Number of questions</button>
+          <button data-m="marks" aria-pressed="false">Total marks</button>
+          <button data-m="time" aria-pressed="false">Working time</button>
+        </div>
+        <div class="row" id="modeCount" style="margin-top:16px">
           <div>
             <label for="nMC">Section I: multiple choice</label>
             <input type="number" id="nMC" min="0" value="5">
@@ -62,6 +68,36 @@
             <input type="number" id="nWR" min="0" value="5">
             <div class="avail" id="availWR"></div>
           </div>
+        </div>
+        <div id="modeMarks" hidden>
+          <div class="row" style="margin-top:16px">
+            <div>
+              <label for="tMC">Section I marks (multiple choice)</label>
+              <input type="number" id="tMC" min="0" value="10">
+              <div class="avail" id="availMCm"></div>
+            </div>
+            <div>
+              <label for="tWR">Section II marks (written response)</label>
+              <input type="number" id="tWR" min="0" value="40">
+              <div class="avail" id="availWRm"></div>
+            </div>
+          </div>
+          <p class="hint" id="marksTotal" style="margin:12px 0 0"></p>
+        </div>
+        <div id="modeTime" hidden>
+          <div class="row" style="margin-top:16px">
+            <div>
+              <label for="tTMC">Section I time (minutes)</label>
+              <input type="number" id="tTMC" min="0" step="5" value="15">
+              <div class="avail" id="availTMC"></div>
+            </div>
+            <div>
+              <label for="tTWR">Section II time (minutes)</label>
+              <input type="number" id="tTWR" min="0" step="5" value="75">
+              <div class="avail" id="availTWR"></div>
+            </div>
+          </div>
+          <p class="hint" id="timeTotal" style="margin:12px 0 0"></p>
         </div>
       </div>
       <div class="bar">
@@ -81,15 +117,24 @@
           <label for="tutor">Tutor name</label>
           <input type="text" id="tutor" placeholder="Shown on the paper" maxlength="60">
         </div>
-        <label class="chip" style="margin:0"><input type="checkbox" id="showAns"> Include answers</label>
         <button class="btn" id="back">Back</button>
         <button class="btn" id="reshuffle">Shuffle again</button>
         <button class="btn" id="complete">Mark completed</button>
         <button class="btn primary" id="print">Print / save as PDF</button>
       </div>
-      <p class="msg no-print" id="histMsg"></p>
-      <p class="msg no-print" id="paperMeta"></p>
-      <div class="pages-host"><div class="pages" id="pages"></div></div>
+      <div class="bar no-print" style="margin-bottom:12px">
+        <div class="seg" id="viewSeg" role="group" aria-label="Preview">
+          <button data-v="paper" class="on" aria-pressed="true">Paper</button>
+          <button data-v="key" aria-pressed="false">Answer key</button>
+        </div>
+        <label class="chip"><input type="checkbox" id="optCover" checked> Cover page</label>
+        <label class="chip"><input type="checkbox" id="optLines"> Working lines</label>
+        <label class="chip"><input type="checkbox" id="optFormulas"> NESA reference sheet</label>
+      </div>
+      <p class="msg no-print" id="histMsg" aria-live="polite"></p>
+      <p class="msg no-print" id="paperMeta" aria-live="polite"></p>
+      <p class="msg no-print" id="refMsg" aria-live="polite" style="color:var(--accent)"></p>
+      <div class="pages-host"><div class="pages" id="pages"></div><div class="pages" id="keyPages" hidden></div></div>
     </section>
   </main>
 </div>

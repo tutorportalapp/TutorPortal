@@ -7,6 +7,7 @@
 <title>TutorPortal: Practice paper builder for maths tutors</title>
 <meta name="description" content="Build custom Mathematics Advanced practice papers from trial paper questions in minutes.">
 <link rel="stylesheet" href="css/style.css">
+<script src="js/ui.js"></script>
 </head>
 <body>
 <header class="site-header">
@@ -16,7 +17,7 @@
       <a class="brand" href="index.html">TutorPortal</a>
     </div>
     <div class="mast-right">
-      <p class="stats-line" id="mastStats"></p>
+      <p class="stats-line" id="mastStats" aria-live="polite"></p>
       <div class="toolbar">
         <a class="btn" href="library.html?focus=1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg> Search</a>
         <span id="authSlot"><a class="btn primary" href="login.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg> Sign In</a></span>
@@ -46,11 +47,26 @@
     <div class="card"><div class="num">2</div><h3>Preview and print</h3><p>Related parts stay together, questions run easy to hard, and diagrams come with them.</p></div>
     <div class="card"><div class="num">3</div><h3>Keep your history</h3><p>With a profile, every paper is saved so you can re-print it or avoid repeating questions. </p></div>
   </section>
+
+  <section class="contact" id="contact" aria-labelledby="contactH">
+    <h2 id="contactH">Contact</h2>
+    <p>Spotted a mistake in a question, want a school or year added, or have an idea? Send a message and we will get back to you.</p>
+    <form id="contactForm" novalidate>
+      <label for="cEmail">Your email</label>
+      <input type="email" id="cEmail" autocomplete="email" required maxlength="254">
+      <label for="cMsg">Message</label>
+      <textarea id="cMsg" required minlength="5" maxlength="4000"></textarea>
+      <input class="hp" type="text" id="cWebsite" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button class="btn primary" type="submit" id="cSend">Send message</button>
+      <p class="msg" id="cStatus" role="status" aria-live="polite" style="margin-top:12px"></p>
+    </form>
+  </section>
 </main>
 
 <footer class="site-footer"><div class="wrap">TutorPortal is an independent tool for tutors. Not affiliated with NESA or any school.</div></footer>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
-<script>document.addEventListener("DOMContentLoaded",()=>{if(window.TP)TP.session().then(s=>{if(s)document.querySelector(".hero .btn.primary").textContent="Build a paper"}).catch(()=>{})})</script>
+<script src="js/contact.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{if(window.TP)TP.metaLine().then(t=>{if(t)document.getElementById("mastStats").textContent=t});if(window.TP)TP.session().then(s=>{if(s)document.querySelector(".hero .btn.primary").textContent="Build a paper"}).catch(()=>{})})</script>
 </body>
 </html>
