@@ -70,6 +70,7 @@ label { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-t
 .main { padding: 28px 28px 64px 36px; min-width: 0; }
 .side h4 { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); font-weight: 500; margin: 24px 0 10px; }
 .side h4:first-child { margin-top: 0; }
+.side h4:not(:first-child) { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 16px; }
 .side .hint { font-size: 12px; color: var(--faint); margin: -4px 0 10px; }
 .flist { display: grid; gap: 2px; }
 .fitem { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; border-left: 2px solid transparent; border-radius: 0 var(--radius) var(--radius) 0; color: var(--muted); cursor: pointer; font-size: 14.5px; text-align: left; background: none; border-top: 0; border-right: 0; border-bottom: 0; font-family: inherit; width: 100%; margin: 0; text-transform: none; letter-spacing: 0; }
@@ -166,6 +167,9 @@ details.group .fitem.all { color: var(--accent); }
 .q .qn { font-weight: 700; min-width: 28px; }
 .q .qb { flex: 1; min-width: 0; }
 .q .stem { margin-bottom: 6px; }
+.frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; text-align: center; line-height: 1.2; margin: 0 .12em; font-size: .95em; }
+.frac .num { padding: 0 .2em; border-bottom: 1px solid currentColor; }
+.frac .den { padding: 0 .2em; }
 .q sup { font-size: .72em; line-height: 0; vertical-align: baseline; position: relative; top: -.5em; }
 .part { display: flex; justify-content: space-between; gap: 16px; margin: 6px 0; }
 .part .marks { white-space: nowrap; font-size: .86em; color: #555; font-family: system-ui, sans-serif; }
@@ -205,15 +209,18 @@ details.group .fitem.all { color: var(--accent); }
 .cv-pg { position: absolute; right: 6mm; bottom: 4mm; font: 600 13px system-ui, sans-serif; }
 
 /* ---- library ---- */
-.side label { margin-top: 14px; }
-.side > label:first-child { margin-top: 0; }
 .side select { padding: 9px 12px; font-size: 14px; }
-.side .starred { display: flex; align-items: center; gap: 8px; margin-top: 20px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius); cursor: pointer; text-transform: none; letter-spacing: 0; font-family: var(--sans); font-size: 14px; color: var(--text); }
+.side .starred svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; flex: none; }
+.side .starred.on { border-color: #f5b82e; background: rgba(245, 184, 46, .13); color: #f5b82e; }
+.side .starred.on svg { fill: currentColor; }
+.side .starred input { margin: 0; }
+.side details.group.top { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
+.side .starred { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius); cursor: pointer; text-transform: none; letter-spacing: 0; font-family: var(--sans); font-size: 14px; color: var(--text); }
 .tabs { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 0 0 18px; }
 .star { background: none; border: 0; padding: 4px; color: var(--faint); cursor: pointer; line-height: 0; border-radius: var(--radius); }
 .star svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
-.star:hover { color: var(--accent); }
-.star.on { color: var(--accent); }
+.star:hover { color: #f5b82e; }
+.star.on { color: #f5b82e; }
 .star.on svg { fill: currentColor; }
 .irow { cursor: pointer; }
 .pager { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 26px 0 0; font-family: var(--mono); font-size: 13px; color: var(--muted); }
@@ -229,6 +236,7 @@ details.group .fitem.all { color: var(--accent); }
 .dots i.on { background: var(--accent); }
 .qpaper { margin: 12px 16px 16px; background: #fff; color: #111; border-radius: 4px; padding: 18px 22px 4px; font-family: Georgia, "Times New Roman", serif; font-size: 15px; line-height: 1.55; }
 .qpaper .q { margin-bottom: 14px; }
+.side .starred.on { border-color: #f5b82e; background: rgba(245, 184, 46, .13); color: #f5b82e; }
 .title-input { max-width: 420px; }
 
 @media (max-width: 900px) {

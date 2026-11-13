@@ -13,7 +13,7 @@
   };
 
   // "x^2" -> x<sup>2</sup>, "4^(3x+1)" -> 4<sup>3x+1</sup>, "e^-x" -> e<sup>-x</sup>
-  function rich(text) {
+  function supRich(text) {
     const frag = document.createDocumentFragment();
     let buf = '';
     const flush = () => { if (buf) { frag.append(document.createTextNode(buf)); buf = ''; } };
@@ -34,11 +34,44 @@
       if (sup === null) { buf += c; continue; }
       flush();
       const s = document.createElement('sup');
-      s.append(rich(sup));
+      s.append(supRich(sup));
       frag.append(s);
       i = end - 1;
     }
     flush();
+    return frag;
+  }
+
+  // "a/b" is a fraction: stacked with a bar. Operands are runs of numbers/letters/brackets/powers, e.g. sqrt(3)/2, d^2y/dx^2, 8/(1 - 2x).
+  const GRP = '\\((?:[^()]|\\([^()]*\\))*\\)';
+  const SUP = '(?:\\^(?:-?[A-Za-z0-9]+|' + GRP + '))?';
+  const UNIT = '(?:(?:\\d+\\.)?[A-Za-z0-9]+(?![A-Za-z0-9])|' + GRP + ')' + SUP; // words are maximal, so the pattern cannot backtrack badly
+  const FRAC_SRC = ('(-?(?:' + UNIT + ')+)/(-?(?:' + UNIT + ')+)');
+  const NOT_FRAC = new Set(['and/or', 'his/her', 'he/she', 'true/false', 'yes/no']);
+  const unwrap = (t) => {
+    if (t[0] !== '(' || t[t.length - 1] !== ')') return t;
+    let d = 0;
+    for (let i = 0; i < t.length; i++) {
+      if (t[i] === '(') d++;
+      else if (t[i] === ')' && --d === 0 && i < t.length - 1) return t;
+    }
+    return t.slice(1, -1);
+  };
+  function rich(text) {
+    const frag = document.createDocumentFragment();
+    let last = 0, m;
+    const FRAC = new RegExp(FRAC_SRC, 'g'); // per call: rich() recurses
+    while ((m = FRAC.exec(text))) {
+      const [all, a, b] = m;
+      if (NOT_FRAC.has(all.toLowerCase()) || /^[A-Za-z]{4,}$/.test(a) || /^[A-Za-z]{4,}$/.test(b)) { FRAC.lastIndex = m.index + a.length; continue; }
+      frag.append(supRich(text.slice(last, m.index)));
+      const num = el('span', { class: 'num' }), den = el('span', { class: 'den' });
+      num.append(rich(unwrap(a)));
+      den.append(rich(unwrap(b)));
+      frag.append(el('span', { class: 'frac' }, num, den));
+      last = m.index + all.length;
+    }
+    frag.append(supRich(text.slice(last)));
     return frag;
   }
   const richEl = (tag, cls, text) => { const n = el(tag, cls ? { class: cls } : {}); n.append(rich(text)); return n; };

@@ -9,7 +9,7 @@
   for (const [m, ts] of Object.entries(TP.MODULES)) ts.forEach((t) => (moduleOf[t] = m));
 
   let DIAG = {}, UNITS = [], PAPERS = [];
-  const f = { school: '', year: '', topic: '', level: '', type: '', star: false, text: '', view: 'papers', sort: 'school', page: 0 };
+  const f = { school: new Set(), year: new Set(), topic: new Set(), level: new Set(), type: new Set(), star: false, text: '', view: 'papers', sort: 'school', page: 0 };
   let openKey = null;
   let rank = null; // Map unitKey -> random number while shuffled
 
@@ -41,42 +41,65 @@
   }
 
   // ---- filters ----
-  const topicOk = (topics) => {
-    if (!f.topic) return true;
-    const [kind, name] = [f.topic[0], f.topic.slice(2)];
-    const list = [...topics];
-    return kind === 'm' ? list.some((t) => moduleOf[t] === name) : list.includes(name);
-  };
+  const none = (set) => set.size === 0;
+  const topicOk = (topics) => none(f.topic) || [...topics].some((t) => f.topic.has(t));
   const text = () => f.text.trim().toLowerCase();
   const unitOk = (u) =>
-    (!f.school || u.school === f.school) &&
-    (!f.year || u.year === Number(f.year)) &&
+    (none(f.school) || f.school.has(u.school)) &&
+    (none(f.year) || f.year.has(String(u.year))) &&
     topicOk(u.topics) &&
-    (!f.level || u.level === Number(f.level)) &&
-    (!f.type || u.sec === f.type) &&
+    (none(f.level) || f.level.has(String(u.level))) &&
+    (none(f.type) || f.type.has(u.sec)) &&
     (!f.star || TP.favs.has('question', u.key)) &&
     (!text() || text().split(/\s+/).every((w) => u.search.includes(w)));
   const paperOk = (p) =>
-    (!f.school || p.school === f.school) &&
-    (!f.year || p.year === Number(f.year)) &&
+    (none(f.school) || f.school.has(p.school)) &&
+    (none(f.year) || f.year.has(String(p.year))) &&
     topicOk(p.topics) &&
-    (!f.level || p.levels.has(Number(f.level))) &&
+    (none(f.level) || [...p.levels].some((l) => f.level.has(String(l)))) &&
     (!f.star || TP.favs.has('paper', p.key)) &&
     (!text() || `${p.school} ${p.year}`.toLowerCase().includes(text()));
 
-  function fillDropdowns() {
-    const opt = (v, t) => el('option', { value: String(v), text: t });
-    const sel = (id, first, items) => { const s = $(id); s.innerHTML = ''; s.append(opt('', first), ...items); };
-    sel('fSchool', 'All schools', [...new Set(PAPERS.map((p) => p.school))].sort().map((s) => opt(s, s)));
-    sel('fYear', 'All years', [...new Set(PAPERS.map((p) => p.year))].sort((a, b) => b - a).map((y) => opt(y, y)));
-    sel('fLevel', 'All difficulties', [1, 2, 3, 4, 5].map((d) => opt(d, TPR.LEVELS[d])));
-    const t = $('fTopic');
-    t.innerHTML = '';
-    t.append(opt('', 'All topics'));
+  // Expanding checkbox filters, the same system as the builder's topic groups. Nothing ticked means all.
+  const boxes = []; // { key, value, input }
+  const counters = []; // functions that refresh each group's "All / n chosen" label
+  function group(key, title, items, opts = {}) {
+    const count = el('small', { text: 'All' });
+    const inner = el('div', { class: 'inner' });
+    const inputs = items.map(([value, label, n]) => {
+      const cb = el('input', { type: 'checkbox', value: String(value) });
+      cb.addEventListener('change', () => { cb.checked ? f[key].add(String(value)) : f[key].delete(String(value)); f.page = 0; refresh(); draw(); });
+      boxes.push({ key, value: String(value), input: cb });
+      inner.append(el('label', { class: 'fitem' }, el('span', { class: 'l' }, cb, label), el('span', { class: 'n', text: String(n) })));
+      return cb;
+    });
+    const all = el('input', { type: 'checkbox' });
+    if (opts.selectAll) {
+      inner.prepend(el('label', { class: 'fitem all' }, el('span', { class: 'l' }, all, 'Select all')));
+      all.addEventListener('change', () => { inputs.forEach((cb) => { cb.checked = all.checked; all.checked ? f[key].add(cb.value) : f[key].delete(cb.value); }); f.page = 0; refresh(); draw(); });
+    }
+    counters.push(() => { const n = inputs.filter((c) => c.checked).length; count.textContent = n === 0 ? 'All' : `${n} chosen`; all.checked = n === inputs.length; });
+    const d = el('details', { class: 'group' + (opts.top ? ' top' : '') }, el('summary', {}, el('span', { class: 't', text: title }), count), inner);
+    if (opts.id) d.id = opts.id;
+    return d;
+  }
+  const refresh = () => counters.forEach((c) => c());
+  const countBy = (fn) => (v) => UNITS.filter((u) => fn(u, v)).length;
+
+  function fillFilters() {
+    const F = $('filters');
+    F.innerHTML = '';
+    const schools = [...new Set(PAPERS.map((p) => p.school))].sort();
+    const years = [...new Set(PAPERS.map((p) => p.year))].sort((a, b) => b - a);
+    F.append(
+      group('school', 'School', schools.map((s) => [s, s, countBy((u, v) => u.school === v)(s)]), { top: true }),
+      group('year', 'Year', years.map((y) => [y, y, countBy((u, v) => u.year === v)(y)]), { top: true }),
+      group('level', 'Difficulty', [1, 2, 3, 4, 5].map((d) => [d, TPR.LEVELS[d], countBy((u, v) => u.level === v)(d)]), { top: true }),
+      group('type', 'Question type', [['I', 'Multiple choice', countBy((u) => u.sec === 'I')()], ['II', 'Written response', countBy((u) => u.sec === 'II')()]], { top: true, id: 'typeBox' }));
+    const T = $('topics');
+    T.innerHTML = '';
     for (const [mod, topics] of Object.entries(TP.MODULES)) {
-      const g = el('optgroup', { label: mod });
-      g.append(opt(`m:${mod}`, `All ${mod}`), ...topics.map((x) => opt(`t:${x}`, x)));
-      t.append(g);
+      T.append(group('topic', mod, topics.map((t) => [t, t, countBy((u, v) => u.topics.includes(v))(t)]), { selectAll: true }));
     }
   }
 
@@ -110,8 +133,7 @@
     if (!list.length) { L.append(el('p', { class: 'empty', text: f.star ? 'No starred papers match those filters.' : 'No papers match those filters.' })); return; }
     const bySchool = f.sort === 'school';
     const sorted = list.slice().sort((a, b) =>
-      f.sort === 'newest' ? b.year - a.year || a.school.localeCompare(b.school)
-      : f.sort === 'year' ? a.year - b.year || a.school.localeCompare(b.school)
+      f.sort === 'year' ? a.year - b.year || a.school.localeCompare(b.school)
       : a.school.localeCompare(b.school) || b.year - a.year);
     let lastSchool = null, n = 0;
     sorted.forEach((p) => {
@@ -137,7 +159,7 @@
         const tags = el('div', { class: 'tags' });
         [...p.modules].sort().forEach((m) => tags.append(el('span', { class: 'badge', text: m })));
         const view = el('button', { class: 'btn', text: 'View its questions' });
-        view.addEventListener('click', () => { f.school = p.school; f.year = String(p.year); f.view = 'questions'; f.page = 0; sync(); draw(); window.scrollTo(0, 0); });
+        view.addEventListener('click', () => { f.school = new Set([p.school]); f.year = new Set([String(p.year)]); f.view = 'questions'; f.page = 0; sync(); draw(); window.scrollTo(0, 0); });
         L.append(el('div', { class: 'detail' },
           el('div', {},
             el('div', { class: 't', text: `${p.school} ${p.year} · Maths Advanced` }),
@@ -159,7 +181,6 @@
     for (let i = 1; i <= 5; i++) dots.append(el('i', { class: i <= u.level ? 'on' : '' }));
     const tags = el('div', { class: 'qc-tags' });
     u.topics.forEach((t) => tags.append(el('span', { class: 'badge topic', text: t })));
-    u.subs.forEach((t) => tags.append(el('span', { class: 'badge sub', text: t })));
     tags.append(dots);
     return el('article', { class: 'qcard' },
       el('div', { class: 'qc-head' }, meta, starBtn('question', u.key)),
@@ -207,22 +228,22 @@
     q ? drawQuestions() : drawPapers();
   }
 
-  // keep the dropdowns showing the state (e.g. after "View its questions")
+  // keep the filter boxes showing the state (e.g. after "View its questions")
   const sync = () => {
-    $('fSchool').value = f.school; $('fYear').value = f.year; $('fTopic').value = f.topic;
-    $('fLevel').value = f.level; $('fType').value = f.type; $('fStar').checked = f.star; $('q').value = f.text;
+    boxes.forEach((b) => (b.input.checked = f[b.key].has(b.value)));
+    $('fStar').checked = f.star; $('q').value = f.text;
+    $('starBox').classList.toggle('on', f.star);
+    refresh();
   };
 
   function wire() {
-    const on = (id, key, conv = (v) => v) => $(id).addEventListener('change', () => { f[key] = conv($(id).value); f.page = 0; draw(); });
-    on('fSchool', 'school'); on('fYear', 'year'); on('fTopic', 'topic'); on('fLevel', 'level'); on('fType', 'type');
-    $('fStar').addEventListener('change', () => { f.star = $('fStar').checked; f.page = 0; draw(); });
+    $('fStar').addEventListener('change', () => { f.star = $('fStar').checked; $('starBox').classList.toggle('on', f.star); f.page = 0; draw(); });
     $('q').addEventListener('input', () => { f.text = $('q').value; f.page = 0; draw(); });
     $('sort').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { f.sort = b.dataset.s; draw(); } });
     $('view').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { f.view = b.dataset.v; f.page = 0; draw(); } });
     $('shuffle').addEventListener('click', () => { rank = new Map(UNITS.map((u) => [u.key, Math.random()])); f.page = 0; draw(); });
     $('unshuffle').addEventListener('click', () => { rank = null; f.page = 0; draw(); });
-    $('reset').addEventListener('click', () => { Object.assign(f, { school: '', year: '', topic: '', level: '', type: '', star: false, text: '', page: 0 }); sync(); draw(); });
+    $('reset').addEventListener('click', () => { for (const k of ['school', 'year', 'topic', 'level', 'type']) f[k].clear(); Object.assign(f, { star: false, text: '', page: 0 }); sync(); draw(); });
   }
 
   TP.requireLogin()
@@ -231,7 +252,7 @@
       DIAG = diag;
       prepare(rows);
       TP.stats(rows);
-      fillDropdowns();
+      fillFilters();
       wire();
       const qs = new URLSearchParams(location.search);
       if (qs.get('view') === 'questions') f.view = 'questions';

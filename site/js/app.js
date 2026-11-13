@@ -25,7 +25,7 @@
     const ok = (u) =>
       schools.has(u.school) &&
       (topics.size === 0 || u.parts.some((p) => (p.t || []).some((t) => topics.has(t)))) &&
-      (levels.size === 0 || levels.has(TPR.level(u)));
+      levels.has(TPR.level(u));
     const pool = UNITS.filter(ok);
     return { mc: pool.filter((u) => u.sec === 'I'), wr: pool.filter((u) => u.sec === 'II') };
   }
@@ -60,6 +60,7 @@
     for (let d = 1; d <= 5; d++) {
       const n = UNITS.filter((u) => TPR.level(u) === d).length;
       const inp = el('input', { type: 'checkbox', value: String(d) });
+      inp.checked = true;
       inp.addEventListener('change', refreshLimits);
       lv.append(el('label', { class: 'fitem' }, el('span', { class: 'l' }, inp, TPR.LEVELS[d]), el('span', { class: 'n', text: String(n) })));
     }
@@ -261,7 +262,7 @@
     if ($('showAns').checked) {
       newPage();
       place({ el: el('h2', { class: 'sec-h', text: 'Answers' }) });
-      answers.forEach(([num, parts]) => parts.forEach((p) => place({ el: el('div', { class: 'ans', text: `Q${num}${p.p ? ' ' + p.p : ''}: ${p.a}` }) })));
+      answers.forEach(([num, parts]) => parts.forEach((p) => { const d = el('div', { class: 'ans' }); d.append(`Q${num}${p.p ? ' ' + p.p : ''}: `, rich(String(p.a))); place({ el: d }); }));
     }
 
     // page ranges for the cover (the cover is page 1)
