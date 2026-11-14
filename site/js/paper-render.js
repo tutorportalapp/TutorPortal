@@ -67,20 +67,23 @@
     if (lm) return { pre: t.slice(0, lm.index).trim(), lStem: '', sub: t.slice(lm.index + lm.len).trim() };
     return { pre: '', lStem: '', sub: t };
   }
-  function splitOptions(t) {               // "stem A. .. B. .. C. .. D. .." -> {stem, options}
-    var re = /(^|\s)([A-D])\.\s/g, hits = [], m;
-    while ((m = re.exec(t))) hits.push({ k: m[2], start: m.index + m[1].length, end: m.index + m[0].length });
-    for (var a = hits.length - 1; a >= 0; a--) {
-      if (hits[a].k !== 'A') continue;
-      var seq = [hits[a]], want = ['B', 'C', 'D'], from = a + 1, ok = true;
-      for (var w = 0; w < 3 && ok; w++) {
-        var f = null;
-        for (var j = from; j < hits.length; j++) if (hits[j].k === want[w]) { f = j; break; }
-        if (f == null) ok = false; else { seq.push(hits[f]); from = f + 1; }
+  function splitOptions(t) {               // "stem A. .. B. .. C. .. D. .." (also "(A) .. (B) .." or "A) .. B) ..") -> {stem, options}
+    var STYLES = [/(^|\s)([A-D])\.\s/g, /(^|\s)\(([A-D])\)\s*/g, /(^|\s)([A-D])\)\s/g];
+    for (var si = 0; si < STYLES.length; si++) {
+      var re = STYLES[si], hits = [], m;
+      while ((m = re.exec(t))) hits.push({ k: m[2], start: m.index + m[1].length, end: m.index + m[0].length });
+      for (var a = hits.length - 1; a >= 0; a--) {
+        if (hits[a].k !== 'A') continue;
+        var seq = [hits[a]], want = ['B', 'C', 'D'], from = a + 1, ok = true;
+        for (var w = 0; w < 3 && ok; w++) {
+          var f = null;
+          for (var j = from; j < hits.length; j++) if (hits[j].k === want[w]) { f = j; break; }
+          if (f == null) ok = false; else { seq.push(hits[f]); from = f + 1; }
+        }
+        if (!ok) continue;
+        return { stem: t.slice(0, seq[0].start).trim(),
+                 options: seq.map(function (h, i) { return { k: h.k, text: t.slice(h.end, i < 3 ? seq[i + 1].start : t.length).trim() }; }) };
       }
-      if (!ok) continue;
-      return { stem: t.slice(0, seq[0].start).trim(),
-               options: seq.map(function (h, i) { return { k: h.k, text: t.slice(h.end, i < 3 ? seq[i + 1].start : t.length).trim() }; }) };
     }
     return null;
   }
