@@ -109,7 +109,7 @@
     function parseExpr() {
       var left = parseTerm();
       while (peek() === '+' || peek() === '-') {
-        var op = next(), right = parseTerm(), l = left;
+        const op = next(), right = parseTerm(), l = left;     // const: each loop pass needs its own l/right (var made them shared and recursed forever)
         left = op === '+' ? function (x) { return l(x) + right(x); } : function (x) { return l(x) - right(x); };
       }
       return left;
@@ -117,7 +117,7 @@
     function parseTerm() {
       var left = parseUnary();
       while (peek() === '*' || peek() === '/') {
-        var op = next(), right = parseUnary(), l = left;
+        const op = next(), right = parseUnary(), l = left;
         left = op === '*' ? function (x) { return l(x) * right(x); } : function (x) { return l(x) / right(x); };
       }
       return left;

@@ -19,6 +19,14 @@
     const flush = () => { if (buf) { frag.append(document.createTextNode(buf)); buf = ''; } };
     for (let i = 0; i < text.length; i++) {
       const c = text[i];
+      if (c === '_' && /[A-Za-z]/.test(text[i - 1] || '') && text[i + 1] === '(') { // log_(2e)
+        let depth = 0, close = -1;
+        for (let j = i + 1; j < text.length; j++) {
+          if (text[j] === '(') depth++;
+          else if (text[j] === ')' && --depth === 0) { close = j; break; }
+        }
+        if (close > 0) { flush(); const sb = document.createElement('sub'); sb.append(supRich(text.slice(i + 2, close))); frag.append(sb); i = close; continue; }
+      }
       if (c === '_' && /[A-Za-z]/.test(text[i - 1] || '') && /[A-Za-z0-9\u221e]/.test(text[i + 1] || '')) {
         flush(); frag.append(el('sub', { text: text[i + 1] })); i++; continue; // log_a, T_n, S_∞
       }
@@ -48,7 +56,7 @@
   // "a/b" is a fraction: stacked with a bar. Operands are runs of numbers/letters/brackets/powers, e.g. sqrt(3)/2, d^2y/dx^2, 8/(1 - 2x).
   const GRP = '\\((?:[^()]|\\([^()]*\\))*\\)';
   const SUP = '(?:\\^(?:-?[A-Za-z0-9\\u0370-\\u03ff]+|' + GRP + '))?';
-  const UNIT = '(?:(?:\\d+\\.)?[A-Za-z0-9\\u0370-\\u03ff]+(?![A-Za-z0-9\\u0370-\\u03ff])|' + GRP + ')' + SUP; // words are maximal, so the pattern cannot backtrack badly
+  const UNIT = '(?:(?:\\d+\\.)?[A-Za-z0-9_\\u0370-\\u03ff]+(?![A-Za-z0-9_\\u0370-\\u03ff])|' + GRP + ')' + SUP; // words are maximal, so the pattern cannot backtrack badly
   const FRAC_SRC = ('(-?(?:' + UNIT + ')+)/(-?(?:' + UNIT + ')+)');
   const NOT_FRAC = new Set(['and/or', 'his/her', 'he/she', 'true/false', 'yes/no']);
   const unwrap = (t) => {

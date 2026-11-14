@@ -342,3 +342,5 @@ details.group .fitem.all { color: var(--accent); }
 .q .pq-marks { font-family: system-ui, sans-serif; color: #555; }
 .q .pq-fig svg { max-height: 280px; }
 .q .pq-oval { color: #111; }
+
+.pq-cont .pq-num { visibility: hidden; }

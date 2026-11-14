@@ -285,15 +285,75 @@
       body = p.querySelector('.pbody');
     };
     const held = (n) => n && (n.classList.contains('sec-h') || n.classList.contains('sec-note'));
+    const fits = () => body.scrollHeight <= body.clientHeight + 1;
+
+    // A question taller than the room left is cut between its parts, never through a diagram:
+    // a figure always travels with the line of text before it (and working lines with their part).
+    function atomsOf(main) {
+      let atoms = [];
+      [...main.children].forEach((c) => {
+        if (c.classList.contains('pq-group')) [...c.children].forEach((k) => atoms.push({ nodes: [k], group: c }));
+        else atoms.push({ nodes: [c], group: null });
+      });
+      const isFig = (a) => a.nodes[0].classList.contains('pq-fig');
+      const isLines = (a) => a.nodes[0].classList.contains('lines');
+      const isStem = (a) => a.nodes[0].classList.contains('pq-stem');
+      const out = [];
+      for (let i = 0; i < atoms.length; i++) {
+        const cur = { nodes: [...atoms[i].nodes], group: atoms[i].group };
+        while (i + 1 < atoms.length && atoms[i + 1].group === cur.group && (isFig(atoms[i + 1]) || isLines(atoms[i + 1]) || isStem(cur))) {
+          cur.nodes.push(...atoms[++i].nodes);
+        }
+        out.push(cur);
+      }
+      return out;
+    }
+    function splitQuestion(q) {
+      const section = q.querySelector('.pq'), main = q.querySelector('.pq-main');
+      if (!section || !main) return;
+      const atoms = atomsOf(main);
+      main.replaceChildren();
+      let cur = { q, main, groupSrc: null, groupEl: null, count: 0 };
+      const add = (a) => {
+        let parent = cur.main;
+        if (a.group) {
+          if (cur.groupSrc !== a.group) { cur.groupEl = a.group.cloneNode(false); cur.main.append(cur.groupEl); cur.groupSrc = a.group; }
+          parent = cur.groupEl;
+        } else cur.groupSrc = null;
+        a.nodes.forEach((n) => parent.append(n));
+      };
+      const next = () => {
+        newPage();
+        const q2 = q.cloneNode(false), sec2 = section.cloneNode(false), main2 = main.cloneNode(false);
+        sec2.classList.add('pq-cont');
+        sec2.append(section.querySelector('.pq-num').cloneNode(false), main2);
+        q2.append(sec2);
+        body.append(q2);
+        cur = { q: q2, main: main2, groupSrc: null, groupEl: null, count: 0 };
+      };
+      atoms.forEach((a) => {
+        add(a);
+        if (!fits() && cur.count > 0) {
+          a.nodes.forEach((n) => n.remove());
+          if (cur.groupEl && !cur.groupEl.children.length) { cur.groupEl.remove(); cur.groupSrc = null; }
+          next();
+          add(a);
+        }
+        cur.count++;
+      });
+    }
+
     const place = (b) => {
       body.append(b.el);
-      if (body.scrollHeight > body.clientHeight + 1 && body.children.length > 1) {
+      if (fits()) return;
+      const tall = b.el.offsetHeight > body.clientHeight; // would not fit even on an empty page
+      if (!tall && body.children.length > 1) {
         body.removeChild(b.el);
         const moved = [b.el];
         while (held(body.lastElementChild)) { moved.unshift(body.lastElementChild); body.removeChild(body.lastElementChild); }
         newPage();
         moved.forEach((m) => body.append(m));
-      }
+      } else if (tall && b.el.querySelector('.pq')) splitQuestion(b.el);
     };
     newPage();
     return { pages, place, breakPage: newPage };
