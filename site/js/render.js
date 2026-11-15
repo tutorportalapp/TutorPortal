@@ -105,12 +105,13 @@
   }
 
   // ---- questions as units (all parts of one question) ----
-  const unitKey = (r) => `${r.s}|${r.y}|${r.sec}|${r.q}`;
+  // A unit is one question, or, for lettered Section II questions, one Set of related lettered parts (column "Set": a, a+b, ...).
+  const unitKey = (r) => `${r.s}|${r.y}|${r.sec}|${r.q}` + (r.ls ? `|${r.ls}` : '');
   function buildUnits(rows) {
     const map = new Map();
     for (const r of rows) {
       const k = unitKey(r);
-      if (!map.has(k)) map.set(k, { key: k, school: r.s, year: r.y, sec: r.sec, q: r.q, parts: [] });
+      if (!map.has(k)) map.set(k, { key: k, school: r.s, year: r.y, sec: r.sec, q: r.q, set: r.ls || '', parts: [] });
       map.get(k).parts.push(r);
     }
     return [...map.values()];
@@ -188,7 +189,7 @@
     const rows = u.parts.map((p) => ({ id: p.id, section: p.sec, marks: p.m, text: p.x }));
     const byId = Object.fromEntries(u.parts.map((p) => [p.id, p]));
     const html = window.PaperRender.renderQuestion(window.PaperRender.groupQuestions(rows)[0], diagIndex(diag), n, {
-      formatMath, ovals: true,
+      formatMath, ovals: true, dropLetter: true,   // a lone lettered part is shown as its own question, without its letter
       afterPart: opts.lines ? (id) => `<div class="lines" aria-hidden="true">${'<i></i>'.repeat(linesFor(byId[id] || {}))}</div>` : null,
     });
     const d = el('div', { class: 'q' });
@@ -207,6 +208,9 @@
   function partLabel(u) {
     const ps = u.parts.map((p) => p.p).filter(Boolean);
     if (!ps.length) return `Q${u.q}`;
+    const letters = [...new Set(ps.map((p) => (p.match(/^\([a-z]\)/) || [''])[0]).filter(Boolean))];
+    if (letters.length === 1) return `Q${u.q} ${letters[0]}`;               // Q13 (c)
+    if (letters.length > 1) return `Q${u.q} ${letters[0]}–${letters[letters.length - 1]}`;   // Q16 (a)–(b)
     return ps.length === 1 ? `Q${u.q} ${ps[0]}` : `Q${u.q} ${ps[0]}–${ps[ps.length - 1]}`;
   }
 

@@ -156,7 +156,8 @@
     const rec = await TP.papers.get(id);
     if (!rec) return;
     const byKey = new Map(UNITS.map((u) => [u.key, u]));
-    const pick = (ks) => ks.map((k) => byKey.get(k)).filter(Boolean);
+    // Papers saved before questions were split into Sets used the whole-question key (school|year|sec|q): expand those to all of its Sets.
+    const pick = (ks) => ks.flatMap((k) => byKey.has(k) ? [byKey.get(k)] : UNITS.filter((u) => u.key.startsWith(k + '|')));
     current = { mc: pick(rec.settings.mc || []), wr: pick(rec.settings.wr || []) };
     currentId = rec.id;
     $('title').value = rec.title || $('title').value;

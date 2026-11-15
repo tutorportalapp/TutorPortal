@@ -273,7 +273,7 @@
     q.groups.forEach(function (g) {
       out.push('<div class="pq-group">');
       if (g.pre) out.push('<p class="pq-stem">' + f(g.pre) + '</p>');
-      var lab = g.letter ? '(' + g.letter + ')' : '';
+      var lab = g.letter && !(opts.dropLetter && q.groups.length === 1) ? '(' + g.letter + ')' : '';
       if (g.subs.length === 1 && !g.subs[0].roman) {
         out.push(line(lab, body(g.subs[0], g.figures), mk(g.subs[0].marks)) + after(g.subs[0]));        // (a) text ...... [2 marks]
       } else {

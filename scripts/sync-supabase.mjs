@@ -32,7 +32,7 @@ try {
   const hash = crypto.createHash('sha256').update(JSON.stringify([qs, dg])).digest('hex');
   const got = await fetch(`${url}/rest/v1/site_meta?key=eq.content&select=value`, { headers });
   const prev = got.ok ? ((await got.json())[0] || {}).value : null;
-  const units = new Set(qs.map((d) => [d.s, d.y, d.sec, d.q].join('|'))).size;
+  const units = new Set(qs.map((d) => [d.s, d.y, d.sec, d.q, d.ls || ''].join('|'))).size;
   const value = {
     hash, papers: new Set(qs.map((d) => `${d.s}|${d.y}`)).size, questions: units, schools: new Set(qs.map((d) => d.s)).size,
     updated: prev && prev.hash === hash && prev.updated ? prev.updated : new Date().toISOString(),

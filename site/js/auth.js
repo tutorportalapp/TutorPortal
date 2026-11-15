@@ -187,7 +187,7 @@
     const el = document.getElementById('mastStats');
     if (!el) return;
     const papers = new Set(rows.map((r) => r.s + '|' + r.y)).size;
-    const units = new Set(rows.map((r) => [r.s, r.y, r.sec, r.q].join('|'))).size;
+    const units = new Set(rows.map((r) => [r.s, r.y, r.sec, r.q, r.ls || ''].join('|'))).size;
     const schools = new Set(rows.map((r) => r.s)).size;
     const base = `${papers} papers · ${units} questions · ${schools} ${schools === 1 ? 'school' : 'schools'}`;
     el.textContent = base;

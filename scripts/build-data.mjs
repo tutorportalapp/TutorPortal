@@ -37,6 +37,7 @@ const questions = rows.map((r, i) => {
     sec: str(r['Section']),
     q: Number(r['Question']),
     p: str(r['Part']),
+    ls: str(r['Set']),   // lettered parts that belong together, e.g. "a+b"; blank = no letters / Section I
     m: Number(r['Marks']),
     d: str(r['Question description']),
     g: list(r['Topic Group']),
