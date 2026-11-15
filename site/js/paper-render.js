@@ -45,6 +45,18 @@
     var m = new RegExp('(^|\\s)(' + src + ')').exec(t);
     return m ? { index: m.index + m[1].length, len: m[2].length } : null;
   }
+  // The part label "(d)" can also appear inside the shared stem as a variable ("depth (d) in metres"), so prefer the occurrence
+  // that starts the text or follows the end of a sentence; fall back to the first occurrence.
+  function findLabel(t, src) {
+    var re = new RegExp('(^|\\s)(' + src + ')', 'g'), first = null, m;
+    while ((m = re.exec(t))) {
+      var hit = { index: m.index + m[1].length, len: m[2].length };
+      if (!first) first = hit;
+      var before = t.slice(0, hit.index).replace(/\s+$/, '');
+      if (!before || /[.?!:;\]]$/.test(before)) return hit;
+    }
+    return first;
+  }
   // -> { pre: text before the letter, lStem: text between (a) and (i), sub: the sub-part wording }
   function splitRow(row) {
     var t = stripNotes(stripMarks(row.text)).replace(/^Q\d+\.\s*/, '').trim();
@@ -57,13 +69,13 @@
       m = findMarker(t, '\\(' + R + '\\)');                                      // "(a) stem (ii) ..."
       if (m) {
         var before = t.slice(0, m.index).trim(), sub = t.slice(m.index + m.len).trim();
-        lm = findMarker(before, '\\(' + L + '\\)');
+        lm = findLabel(before, '\\(' + L + '\\)');
         if (lm) return { pre: before.slice(0, lm.index).trim(), lStem: before.slice(lm.index + lm.len).trim(), sub: sub };
         return { pre: '', lStem: before, sub: sub };
       }
       return { pre: '', lStem: '', sub: t };
     }
-    lm = findMarker(t, '\\(' + L + '\\)');
+    lm = findLabel(t, '\\(' + L + '\\)');
     if (lm) return { pre: t.slice(0, lm.index).trim(), lStem: '', sub: t.slice(lm.index + lm.len).trim() };
     return { pre: '', lStem: '', sub: t };
   }
@@ -222,6 +234,8 @@
     var pres = groups.map(function (g) { return g.pre; });
     var shared = pres[0] && pres.every(function (p) { return p === pres[0]; }) ? pres[0] : '';   // stem used by (a),(b),(c)
     if (shared) groups.forEach(function (g) { g.pre = ''; });
+    var seenPre = {};   // an identical stem on some (not all) parts is printed once, with the first of them
+    groups.forEach(function (g) { if (g.pre) { if (seenPre[g.pre]) g.pre = ''; else seenPre[g.pre] = true; } });
 
     var idToGroup = {}, seen = {}, top = [];
     groups.forEach(function (g) { g.rows.forEach(function (r) { idToGroup[r.id] = g; }); });
