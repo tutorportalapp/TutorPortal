@@ -380,12 +380,12 @@
     if (current.mc.length) {
       blocks.push({ el: el('h2', { class: 'sec-h', text: `Section I – ${plural(S.mcMarks, 'mark')}` }) });
       blocks.push({ el: el('p', { class: 'sec-note', text: `Questions 1–${S.nMC}. Fill in the oval for the correct answer.` }) });
-      current.mc.forEach((u) => { const e = TPR.renderMC(u, n, DIAG); e.dataset.sec = 'I'; blocks.push({ el: e }); answers.push([n, u.parts]); n++; });
+      current.mc.forEach((u) => { const e = TPR.renderMC(u, n, DIAG); e.dataset.sec = 'I'; blocks.push({ el: e }); answers.push([n, u.parts, u]); n++; });
     }
     if (current.wr.length) {
       blocks.push({ el: el('h2', { class: 'sec-h', text: `Section II – ${plural(S.wrMarks, 'mark')}` }) });
       blocks.push({ el: el('p', { class: 'sec-note', text: 'Show relevant mathematical reasoning and/or calculations.' }) });
-      current.wr.forEach((u) => { const e = TPR.renderWR(u, n, DIAG, { lines }); e.dataset.sec = 'II'; blocks.push({ el: e }); answers.push([n, u.parts]); n++; });
+      current.wr.forEach((u) => { const e = TPR.renderWR(u, n, DIAG, { lines }); e.dataset.sec = 'II'; blocks.push({ el: e }); answers.push([n, u.parts, u]); n++; });
     }
 
     if (useCover) wrap.append(el('div')); // placeholder for the cover, filled once page numbers are known
@@ -407,11 +407,12 @@
     // answer key (a separate printout, so students never see it by accident)
     const K = paginator(keyWrap, tutor, `${title} – Answer key`);
     K.place({ el: el('h2', { class: 'sec-h', text: 'Answer key' }) });
-    answers.forEach(([num, parts]) => {
+    answers.forEach(([num, parts, unit]) => {
+      const shown = TPR.shownLabels(unit);
       const row = el('div', { class: 'ans' }, el('b', { text: `Question ${num}` }));
       parts.forEach((p) => {
         const line = el('div', { class: 'ans-line' });
-        line.append(`${p.p ? p.p + ' ' : ''}`, rich(String(p.a || '–')));
+        line.append(`${shown.get(p.id) ? shown.get(p.id) + ' ' : ''}`, rich(String(p.a || '–')));
         row.append(line);
       });
       K.place({ el: row });

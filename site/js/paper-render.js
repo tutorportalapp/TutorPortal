@@ -273,14 +273,15 @@
     q.groups.forEach(function (g) {
       out.push('<div class="pq-group">');
       if (g.pre) out.push('<p class="pq-stem">' + f(g.pre) + '</p>');
-      var lab = g.letter && !(opts.dropLetter && q.groups.length === 1) ? '(' + g.letter + ')' : '';
+      var solo = !!(opts.dropLetter && g.letter && q.groups.length === 1);   // a lone lettered part is shown as its own question
+      var lab = g.letter && !solo ? '(' + g.letter + ')' : '';
       if (g.subs.length === 1 && !g.subs[0].roman) {
         out.push(line(lab, body(g.subs[0], g.figures), mk(g.subs[0].marks)) + after(g.subs[0]));        // (a) text ...... [2 marks]
       } else {
         out.push(line(lab, (g.stem ? '<div class="pq-text">' + f(g.stem) + '</div>' : '') + figs(g.figures), ''));  // (a) stem + figure
         g.subs.forEach(function (s) {
           if (s.interlude) out.push(line('', '<div class="pq-text">' + f(s.interlude) + '</div>', '', 'pq-interlude'));
-          out.push(line(s.roman ? '(' + s.roman + ')' : '', '<div class="pq-text">' + f(s.text) + '</div>', mk(s.marks), 'pq-sub') + after(s));
+          out.push(line(s.roman ? '(' + (solo ? String.fromCharCode(97 + g.subs.indexOf(s)) : s.roman) + ')' : '', '<div class="pq-text">' + f(s.text) + '</div>', mk(s.marks), 'pq-sub') + after(s));
         });
       }
       out.push('</div>');

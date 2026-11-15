@@ -204,6 +204,20 @@
   const renderWR = withFallback(renderStructured, legacyWR);
   const renderUnit = (u, n, diag, opts) => (u.sec === 'I' ? renderMC(u, n, diag) : renderWR(u, n, diag, opts));
 
+  // Label of each part as printed on a built paper. A question made of one lettered part is shown on its own:
+  // its roman sub-parts become (a), (b), (c) and a single undivided part has no label. Returns Map(part id -> label).
+  function shownLabels(u) {
+    const out = new Map();
+    const letters = new Set(u.parts.map((p) => (p.p.match(/^\([a-z]\)/) || [''])[0]).filter(Boolean));
+    const solo = u.sec === 'II' && letters.size === 1;
+    u.parts.forEach((p, i) => {
+      if (!solo) return out.set(p.id, p.p);
+      const rom = /^\([a-z]\)(\([ivx]+\))/.exec(p.p);
+      out.set(p.id, rom ? `(${String.fromCharCode(97 + i)})` : '');
+    });
+    return out;
+  }
+
   // e.g. "Q7", "Q14 (a)-(c)"
   function partLabel(u) {
     const ps = u.parts.map((p) => p.p).filter(Boolean);
@@ -224,5 +238,5 @@
   const roundUp5 = (n) => Math.max(5, Math.ceil(n / 5) * 5);
 
   window.TPR = { el, rich, stripNumber, splitMarks, commonStem, unitKey, buildUnits, totalMarks, avgDiff, level, LEVELS,
-    topicsOf, subtopicsOf, figureEls, renderMC, renderWR, renderUnit, linesFor, partLabel, duration, roundUp5 };
+    topicsOf, subtopicsOf, figureEls, renderMC, renderWR, renderUnit, linesFor, partLabel, shownLabels, duration, roundUp5 };
 })();
