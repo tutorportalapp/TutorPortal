@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0e1015">
-<title>Log in | TutorPortal</title>
+<title>Log in or create a profile | TutorPortal</title>
+<meta name="robots" content="noindex, follow">
 <link rel="stylesheet" href="css/style.css">
 <script src="js/ui.js"></script>
 </head>
@@ -33,8 +34,8 @@
 
 <main class="wrap" style="max-width:520px;padding-top:36px;padding-bottom:64px">
   <div class="panel">
-    <h2 id="heading">Welcome back</h2>
-    <p class="hint">Log in to save your papers and see your history.</p>
+    <h1 id="heading">Log in</h1>
+    <p class="hint">Create your free profile to save your papers, see your history, and re-print or avoid repeating questions.</p>
 
     <form id="form" novalidate>
       <div id="nameRow" hidden style="margin-bottom:14px">
@@ -75,16 +76,17 @@
   }
   TP.session().then((s) => { if (s) location.replace(dest); }).catch(() => {});
 
-  $('toggle').addEventListener('click', (e) => {
-    e.preventDefault();
-    signup = !signup;
-    $('heading').textContent = signup ? 'Create your profile' : 'Welcome back';
+  const setMode = (on) => {
+    signup = on;
+    $('heading').textContent = signup ? 'Create your profile' : 'Log in';
     $('submit').textContent = signup ? 'Create profile' : 'Log in';
     $('nameRow').hidden = !signup;
     $('toggle').textContent = signup ? 'Already have a profile? Log in' : 'New here? Create a profile';
     $('password').autocomplete = signup ? 'new-password' : 'current-password';
     say('');
-  });
+  };
+  $('toggle').addEventListener('click', (e) => { e.preventDefault(); setMode(!signup); });
+  if (new URLSearchParams(location.search).get('signup')) setMode(true);
 
   $('form').addEventListener('submit', async (e) => {
     e.preventDefault();

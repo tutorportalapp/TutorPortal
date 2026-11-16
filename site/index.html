@@ -4,16 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0e1015">
-<title>TutorPortal: Practice paper builder for maths tutors</title>
-<meta name="description" content="Build custom Mathematics Advanced practice papers from trial paper questions in minutes.">
+<title>Mathematics Advanced Practice Papers | TutorPortal</title>
+<meta name="description" content="Build Mathematics Advanced practice papers for Year 11 and Year 12 in seconds. Choose topics, length and difficulty, then print student and tutor copies.">
+<link rel="canonical" href="https://tutorportalapp.github.io/TutorPortal/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TutorPortal">
+<meta property="og:title" content="Mathematics Advanced Practice Papers | TutorPortal">
+<meta property="og:description" content="Build Mathematics Advanced practice papers for Year 11 and Year 12 in seconds. Choose topics, length and difficulty, then print student and tutor copies.">
+<meta property="og:url" content="https://tutorportalapp.github.io/TutorPortal/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Mathematics Advanced Practice Papers | TutorPortal">
+<meta name="twitter:description" content="Build Mathematics Advanced practice papers for Year 11 and Year 12 in seconds. Choose topics, length and difficulty, then print student and tutor copies.">
 <link rel="stylesheet" href="css/style.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Can students use TutorPortal?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Tutors and students can both use it."}}, {"@type": "Question", "name": "Is TutorPortal free?", "acceptedAnswer": {"@type": "Answer", "text": "Yes, it's free to use today. A paid Pro plan with extended functionality will be available soon."}}, {"@type": "Question", "name": "Does TutorPortal have Year 11 and Year 12 worksheets?", "acceptedAnswer": {"@type": "Answer", "text": "You can build topic worksheets or full practice papers for Year 11 (Preliminary) and Year 12 (HSC) Mathematics Advanced."}}, {"@type": "Question", "name": "Are answers included?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Every paper has an Answer key view. Print the paper on its own for a student copy, or print the answer key as a tutor copy. These are answers only, not worked solutions."}}, {"@type": "Question", "name": "Are the questions rewritten?", "acceptedAnswer": {"@type": "Answer", "text": "No. Questions appear in their original wording."}}, {"@type": "Question", "name": "What question types are there?", "acceptedAnswer": {"@type": "Answer", "text": "Section I (multiple choice) and Section II (written response)."}}, {"@type": "Question", "name": "Can I choose the difficulty?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Filter by difficulty, topic and school before you build."}}, {"@type": "Question", "name": "Do diagrams come with the questions?", "acceptedAnswer": {"@type": "Answer", "text": "Yes."}}, {"@type": "Question", "name": "Can I report a mistake or ask for a school or year to be added?", "acceptedAnswer": {"@type": "Answer", "text": "Yes, use the form below."}}, {"@type": "Question", "name": "Is TutorPortal affiliated with NESA or any school?", "acceptedAnswer": {"@type": "Answer", "text": "No. It's an independent tool."}}]}</script>
 <script src="js/ui.js"></script>
 </head>
 <body>
 <header class="site-header">
   <div class="wrap masthead">
     <div class="mast-left">
-      <p class="eyebrow">New South Wales · Mathematics Advanced</p>
+      <p class="eyebrow">New South Wales · Mathematics Advanced · Preliminary and HSC</p>
       <a class="brand" href="index.html">TutorPortal</a>
     </div>
     <div class="mast-right">
@@ -34,18 +44,48 @@
 
 <main class="wrap">
   <section class="hero">
-    <h1>Custom practice papers, built in minutes.</h1>
-    <p>Choose the topics and how many questions you want. TutorPortal builds a print-ready paper from real trial questions, in their original wording, easiest to hardest.</p>
+    <h1>Mathematics Advanced practice papers, built in seconds</h1>
+    <p>Choose the topics, difficulty and length. TutorPortal builds a print-ready paper from real trial questions in their original wording, easiest to hardest. Free to use today, for tutors and students.</p>
     <div class="actions">
-      <a class="btn primary" href="builder.html">Log in to build a paper</a>
-      <a class="btn" href="login.html">Create a free profile</a>
+      <a class="btn primary" id="ctaMain" href="login.html?signup=1">Create a free profile</a>
+      <a class="btn" id="ctaAlt" href="login.html">Log in</a>
     </div>
   </section>
 
-  <section class="cards">
-    <div class="card"><div class="num">1</div><h3>Choose what to include</h3><p>Pick schools, topics and how many multiple-choice and written-response questions.</p></div>
-    <div class="card"><div class="num">2</div><h3>Preview and print</h3><p>Related parts stay together, questions run easy to hard, and diagrams come with them.</p></div>
-    <div class="card"><div class="num">3</div><h3>Keep your history</h3><p>With a profile, every paper is saved so you can re-print it or avoid repeating questions. </p></div>
+  <section class="intro-block" aria-labelledby="ws">
+    <h2 id="ws">Year 11 and Year 12 worksheets, or a full practice paper</h2>
+    <p>Build a topic worksheet or a full practice paper for Year 11 (Preliminary) or Year 12 (HSC) Mathematics Advanced.</p>
+  </section>
+
+  <section class="how" aria-labelledby="how">
+    <h2 id="how">How it works</h2>
+    <div class="cards">
+      <div class="card"><div class="num">1</div><h3>Choose schools, topics and difficulty</h3><p>Then set the size by number of questions, total marks or working time. Section I is multiple choice and Section II is written response.</p></div>
+      <div class="card"><div class="num">2</div><h3>Preview and print</h3><p>Parts of the same question stay together, questions run easy to hard, and diagrams come with them. Papers print on A4 with a cover page showing total marks and working time.</p></div>
+      <div class="card"><div class="num">3</div><h3>Print a student copy and a tutor copy</h3><p>Print the paper on its own for students, and switch to the answer key for a tutor copy. The key gives answers only, not worked solutions.</p></div>
+      <div class="card"><div class="num">4</div><h3>Keep your history</h3><p>With a profile, every paper is saved so you can re-print it or avoid repeating questions.</p></div>
+    </div>
+  </section>
+
+  <section class="intro-block" aria-labelledby="browse">
+    <h2 id="browse">Browse before you build</h2>
+    <p>The Library lists papers by school or year, and questions by topic. Star the questions you want to come back to, then filter to starred only.</p>
+  </section>
+
+  <section class="faq" aria-labelledby="faqH">
+    <h2 id="faqH">Frequently asked questions</h2>
+    <dl>
+      <div class="faq-item"><dt>Can students use TutorPortal?</dt><dd>Yes. Tutors and students can both use it.</dd></div>
+      <div class="faq-item"><dt>Is TutorPortal free?</dt><dd>Yes, it&#x27;s free to use today. A paid Pro plan with extended functionality will be available soon.</dd></div>
+      <div class="faq-item"><dt>Does TutorPortal have Year 11 and Year 12 worksheets?</dt><dd>You can build topic worksheets or full practice papers for Year 11 (Preliminary) and Year 12 (HSC) Mathematics Advanced.</dd></div>
+      <div class="faq-item"><dt>Are answers included?</dt><dd>Yes. Every paper has an Answer key view. Print the paper on its own for a student copy, or print the answer key as a tutor copy. These are answers only, not worked solutions.</dd></div>
+      <div class="faq-item"><dt>Are the questions rewritten?</dt><dd>No. Questions appear in their original wording.</dd></div>
+      <div class="faq-item"><dt>What question types are there?</dt><dd>Section I (multiple choice) and Section II (written response).</dd></div>
+      <div class="faq-item"><dt>Can I choose the difficulty?</dt><dd>Yes. Filter by difficulty, topic and school before you build.</dd></div>
+      <div class="faq-item"><dt>Do diagrams come with the questions?</dt><dd>Yes.</dd></div>
+      <div class="faq-item"><dt>Can I report a mistake or ask for a school or year to be added?</dt><dd>Yes, use the form below.</dd></div>
+      <div class="faq-item"><dt>Is TutorPortal affiliated with NESA or any school?</dt><dd>No. It&#x27;s an independent tool.</dd></div>
+    </dl>
   </section>
 
   <section class="contact" id="contact" aria-labelledby="contactH">
@@ -54,7 +94,7 @@
     <form id="contactForm" novalidate>
       <label for="cEmail">Your email</label>
       <input type="email" id="cEmail" autocomplete="email" required maxlength="254">
-      <label for="cMsg">Message</label>
+      <label for="cMsg">Your message</label>
       <textarea id="cMsg" required minlength="5" maxlength="4000"></textarea>
       <input class="hp" type="text" id="cWebsite" tabindex="-1" autocomplete="off" aria-hidden="true">
       <button class="btn primary" type="submit" id="cSend">Send message</button>
@@ -63,10 +103,10 @@
   </section>
 </main>
 
-<footer class="site-footer"><div class="wrap">TutorPortal is an independent tool for tutors. Not affiliated with NESA or any school.</div></footer>
+<footer class="site-footer"><div class="wrap">TutorPortal is an independent tool for tutors and students. Not affiliated with NESA or any school.</div></footer>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/contact.js"></script>
-<script>document.addEventListener("DOMContentLoaded",()=>{if(window.TP)TP.metaLine().then(t=>{if(t)document.getElementById("mastStats").textContent=t});if(window.TP)TP.session().then(s=>{if(s)document.querySelector(".hero .btn.primary").textContent="Build a paper"}).catch(()=>{})})</script>
+<script>document.addEventListener("DOMContentLoaded",()=>{if(window.TP)TP.metaLine().then(t=>{if(t)document.getElementById("mastStats").textContent=t});if(window.TP)TP.session().then(s=>{if(s){const m=document.getElementById("ctaMain");m.textContent="Build a paper";m.href="builder.html";document.getElementById("ctaAlt").hidden=true}}).catch(()=>{})})</script>
 </body>
 </html>
