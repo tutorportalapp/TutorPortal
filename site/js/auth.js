@@ -123,6 +123,11 @@
       }
       return s;
     },
+    // True for visitors who are not logged in (never in local demo mode). Used for the limited Builder preview and the Library prompt.
+    async isPreview() {
+      if (TP.demo) return false;
+      return !(await TP.session().catch(() => null));
+    },
     async signOut() {
       const c = await load();
       if (c) await c.auth.signOut();

@@ -257,8 +257,16 @@
     $('reset').addEventListener('click', () => { for (const k of ['school', 'year', 'topic', 'level', 'type']) f[k].clear(); Object.assign(f, { star: false, text: '', page: 0 }); sync(); draw(); });
   }
 
-  TP.requireLogin()
-    .then(() => { $('gate-main').hidden = false; return Promise.all([TP.loadData(), TP.favs.load()]); })
+  TP.isPreview()
+    .then((p) => {
+      if (!p) return TP.requireLogin();
+      // Logged out: nothing but a prompt to log in or sign up.
+      $('gate-main').remove();
+      $('loggedOut').hidden = false;
+      TP.meta().then((m) => { if (m && m.questions) $('loTotal').textContent = m.questions.toLocaleString('en-AU') + ' past-paper questions'; });
+      return new Promise(() => {});
+    })
+    .then(() => { $('gate-main').hidden = false; $('libSearch').hidden = false; $('libIntro').hidden = false; return Promise.all([TP.loadData(), TP.favs.load()]); })
     .then(([[rows, diag]]) => {
       DIAG = diag;
       prepare(rows);

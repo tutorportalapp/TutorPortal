@@ -56,6 +56,15 @@
     <!-- Settings -->
     <section id="choose" class="no-print">
       <h1 class="page-title">Build a Mathematics Advanced practice paper</h1>
+      <div class="preview-banner" id="previewBanner" hidden>
+        <p class="pb-text"><strong>Get access to <span id="previewTotal">the full question bank</span> by logging in.</strong> You are trying the preview: one sample paper built from a small set of questions.</p>
+        <div class="pb-actions"><a class="btn primary" href="login.html?signup=1&amp;next=builder.html">Sign up free</a><a class="btn" href="login.html?next=builder.html">Log in</a></div>
+      </div>
+      <div class="panel" id="previewControls" hidden>
+        <h2>Try the builder</h2>
+        <p class="hint">The preview builds a sample paper from <span id="previewCounts">10 multiple choice and 10 written response questions</span>, with Section II ordered from easy to hard. Logging in unlocks every school, year and topic, and lets you choose the size of your paper and save it to your history.</p>
+      </div>
+      <div id="fullControls">
       <p class="page-sub" id="availSummary" aria-live="polite">Choose schools, difficulty and topics on the left, then how many questions you want.</p>
       <div class="panel">
         <h2>How should the paper be sized?</h2>
@@ -107,6 +116,7 @@
           </div>
           <p class="hint" id="timeTotal" style="margin:12px 0 0"></p>
         </div>
+      </div>
       </div>
       <div class="bar">
         <span class="msg" id="loadMsg">Loading questions...</span>

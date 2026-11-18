@@ -375,3 +375,13 @@ details.group .fitem.all { color: var(--accent); }
 .int .isym { font-size: 1.75em; line-height: 1; font-weight: 300; transform: scaleX(.9); }
 .int .ilim { display: inline-flex; flex-direction: column; justify-content: space-between; font-size: .72em; line-height: 1; margin-left: -.05em; height: 2.4em; padding: .05em 0; }
 .int .ilim .hi { align-self: flex-start; margin-left: .3em; }
+
+/* Logged-out preview */
+.shell.solo { display: block; max-width: 980px; }
+.shell.solo .side { display: none; }
+.preview-banner { display: flex; gap: 16px 24px; align-items: center; justify-content: space-between; flex-wrap: wrap; border: 1px solid var(--accent); border-radius: 12px; padding: 16px 18px; margin: 0 0 18px; background: rgba(120,160,255,.08); }
+.preview-banner .pb-text { margin: 0; flex: 1 1 320px; line-height: 1.5; }
+.pb-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.lo-box { max-width: 640px; padding-top: 64px; padding-bottom: 80px; text-align: center; }
+.lo-box .pb-actions { justify-content: center; margin: 22px 0 14px; }
+.lo-box .page-sub { margin-left: auto; margin-right: auto; }

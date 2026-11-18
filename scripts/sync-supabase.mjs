@@ -2,6 +2,7 @@
 // Needs env: SUPABASE_URL and SUPABASE_SERVICE_KEY (service_role key; keep it secret, never commit it).
 import fs from 'node:fs';
 import crypto from 'node:crypto';
+import { pickPreview } from './pick-preview.mjs';
 
 const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
 if (!fs.existsSync('build/questions.json')) { console.log('No build/questions.json. Nothing to sync.'); process.exit(0); }
@@ -39,4 +40,11 @@ try {
   };
   await post('site_meta', [{ key: 'content', value, updated_at: new Date().toISOString() }], 'key');
 } catch (e) { console.warn('Could not record last-updated time (run supabase/setup.sql?):', e.message); }
+// Questions that logged-out visitors may use in the Builder preview (table preview_questions, see supabase/preview.sql).
+try {
+  const ids = pickPreview(qs, dg);
+  await post('preview_questions', ids.map((id) => ({ id })), 'id');
+  await del('preview_questions', 'id', ids);
+  console.log(`Preview set: ${ids.length} question parts.`);
+} catch (e) { console.warn('Could not update the preview set (run supabase/preview.sql?):', e.message); }
 console.log(`Synced ${qs.length} questions and ${dRows.length} diagram sets to Supabase.`);

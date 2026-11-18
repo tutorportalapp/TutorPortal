@@ -41,12 +41,21 @@
   </nav></div></div>
 </header>
 
-<div class="searchrow no-print"><div class="wrap">
+<div class="searchrow no-print" id="libSearch" hidden><div class="wrap">
   <input type="text" id="q" placeholder="Search, e.g. Abbotsleigh 2023 or chain rule" autocomplete="off" aria-label="Search papers and questions">
   <a class="btn primary" href="builder.html">Build a paper</a>
 </div></div>
 
-<section class="wrap lib-intro no-print">
+<section class="wrap lo-box" id="loggedOut" hidden>
+  <p class="eyebrow">Mathematics Advanced question library</p>
+  <h1 class="page-title">Log in to browse the library</h1>
+  <p class="page-sub">The library holds <strong id="loTotal">thousands of past-paper questions</strong> from NSW trial papers, searchable by school, year, topic and difficulty. Star the ones you like and build them into a practice paper.</p>
+  <p class="page-sub">Creating a profile is free and takes a minute.</p>
+  <div class="pb-actions"><a class="btn primary" href="login.html?signup=1&amp;next=library.html">Sign up free</a><a class="btn" href="login.html?next=library.html">Log in</a></div>
+  <p class="hint">Just looking? <a href="builder.html">Try the Builder preview</a> without an account.</p>
+</section>
+
+<section class="wrap lib-intro no-print" id="libIntro" hidden>
   <h1 class="page-title">Mathematics Advanced question library</h1>
   <p class="page-sub">Browse trial paper questions by topic, school and year, star the ones you want, then build them into a practice paper.</p>
 </section>

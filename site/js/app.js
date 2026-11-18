@@ -32,6 +32,7 @@
 
   const MIN_MC = 1.5, MIN_WR = 1.8; // minutes per mark (HSC pacing)
   function refreshLimits() {
+    if (PREVIEW) { $('build').disabled = UNITS.length === 0; return; }
     const { mc, wr } = eligible();
     const wrMarks = wr.reduce((t, u) => t + TPR.totalMarks(u), 0);
     for (const [id, avail, n] of [['nMC', 'availMC', mc.length], ['nWR', 'availWR', wr.length]]) {
@@ -120,6 +121,14 @@
 
   let mode = 'count';
   function generate() {
+    if (PREVIEW) {
+      current = {
+        mc: shuffle(UNITS.filter((u) => u.sec === 'I')),
+        wr: UNITS.filter((u) => u.sec === 'II').sort((a, b) => TPR.avgDiff(a) - TPR.avgDiff(b) || TPR.totalMarks(a) - TPR.totalMarks(b)),
+      };
+      renderPaper();
+      return;
+    }
     const { mc, wr } = eligible();
     const pick = (pool, n) => shuffle(pool).slice(0, n);
     let nMC, chosenWR;
@@ -150,6 +159,7 @@
   // ---- history ----
   const keysOf = (c) => ({ mc: c.mc.map((u) => u.key), wr: c.wr.map((u) => u.key), tutor: $('tutor').value, cover: $('optCover').checked, lines: $('optLines').checked, formulas: $('optFormulas').checked });
   async function saveHistory(silent) {
+    if (PREVIEW) return;
     const rec = { title: $('title').value, settings: keysOf(current), question_ids: [...current.mc, ...current.wr].flatMap((u) => u.parts.map((p) => p.id)) };
     try {
       if (currentId) await TP.papers.update(currentId, rec);
@@ -506,19 +516,35 @@
     window.addEventListener('resize', fit);
   }
 
-  TP.requireLogin()
-    .then(() => { $('gate-main').hidden = false; return TP.loadData(); })
+  let PREVIEW = false;
+  // Logged-out visitors get a fixed sample paper: the 20 questions the sync job marked as preview questions.
+  function setupPreview() {
+    document.body.classList.add('is-preview');
+    $('gate-main').classList.add('solo');
+    $('choose').before($('previewBanner')); // stays visible after the paper is built
+    $('previewBanner').hidden = false;
+    $('fullControls').hidden = true;
+    $('previewControls').hidden = false;
+    $('complete').hidden = true;
+    $('histMsg').hidden = true;
+    TP.meta().then((m) => { if (m && m.questions) $('previewTotal').textContent = m.questions.toLocaleString('en-AU') + ' questions'; });
+  }
+
+  TP.isPreview()
+    .then((p) => { PREVIEW = p; return p ? null : TP.requireLogin(); })
+    .then(() => { $('gate-main').hidden = false; if (PREVIEW) setupPreview(); return TP.loadData(); })
     .then(([rows, diag]) => {
       ROWS = rows;
       DIAG = diag;
       UNITS = TPR.buildUnits(ROWS);
-      TP.stats(ROWS);
+      if (PREVIEW) TP.metaLine().then((t) => { $('mastStats').textContent = t; }); else TP.stats(ROWS);
       renderChoose();
       wire();
       TP.tutorName().then((n) => { $('tutor').value = n; });
       const open = new URLSearchParams(location.search).get('paper');
-      if (open) openSaved(open);
-      $('loadMsg').textContent = `${UNITS.length} questions from ${new Set(ROWS.map((r) => r.s + r.y)).size} papers`;
+      if (open && !PREVIEW) openSaved(open);
+      $('loadMsg').textContent = PREVIEW ? '' : `${UNITS.length} questions from ${new Set(ROWS.map((r) => r.s + r.y)).size} papers`;
+      if (PREVIEW) { const mcN = UNITS.filter((u) => u.sec === 'I').length; $('previewCounts').textContent = `${mcN} multiple choice and ${UNITS.length - mcN} written response questions`; }
     })
     .catch(() => { $('gate-main').hidden = false; $('loadMsg').textContent = 'Could not load the question data. Please refresh or log in again.'; });
 })();
