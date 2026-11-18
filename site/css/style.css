@@ -363,3 +363,15 @@ details.group .fitem.all { color: var(--accent); }
 .paper-list { color: var(--muted); font-size: 0.9375rem; margin-bottom: 8px; }
 .paper-list summary { cursor: pointer; color: var(--text); }
 .paper-list ul { columns: 3 200px; margin: 10px 0 0; padding-left: 18px; }
+
+/* square roots: radical sign with a bar over the radicand */
+.sqrt { white-space: nowrap; }
+.sqrt .rt { font-size: 1.08em; }
+.sqrt .rad { border-top: 1px solid currentColor; padding: 0 .1em 0 .04em; margin-left: -.02em; }
+.den .sqrt { display: inline-block; padding-top: .18em; }
+
+/* integral sign with limits */
+.int { display: inline-flex; align-items: center; vertical-align: middle; white-space: nowrap; margin-right: .05em; }
+.int .isym { font-size: 1.75em; line-height: 1; font-weight: 300; transform: scaleX(.9); }
+.int .ilim { display: inline-flex; flex-direction: column; justify-content: space-between; font-size: .72em; line-height: 1; margin-left: -.05em; height: 2.4em; padding: .05em 0; }
+.int .ilim .hi { align-self: flex-start; margin-left: .3em; }

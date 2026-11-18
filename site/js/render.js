@@ -12,6 +12,54 @@
     return n;
   };
 
+  // Words used in the database for symbols: pi, theta, mu, sigma, infinity, "8 degrees", "->", "+/-", "(a, b) U (c, d)", "sqrt 3" (-> sqrt(3)).
+  const NL = '(?<![A-Za-z])', NR = '(?![A-Za-z])';
+  const SYMBOLS = [
+    [/\+\/-/g, '\u00b1'],
+    [new RegExp(NL + 'sqrt\\s*(\\d+(?:\\.\\d+)?)(?!\\d)', 'g'), 'sqrt($1)'],
+    [new RegExp(NL + 'sqrt\\s+([A-Za-z])' + NR, 'g'), 'sqrt($1)'],
+    [new RegExp(NL + 'pi' + NR, 'g'), '\u03c0'],
+    [new RegExp(NL + 'theta' + NR, 'g'), '\u03b8'],
+    [new RegExp(NL + 'mu' + NR, 'g'), '\u03bc'],
+    [new RegExp(NL + 'sigma' + NR, 'g'), '\u03c3'],
+    [new RegExp(NL + 'infinity' + NR, 'g'), '\u221e'],
+    [new RegExp(NL + 'inf' + NR, 'g'), '\u221e'],
+    [/(\d(?:\.\d+)?)\s*degrees?(?![A-Za-z])/g, '$1\u00b0'],
+    [/->/g, '\u2192'],
+    [/([)\]])\s+U\s+([(\[])/g, '$1 \u222a $2'],
+  ];
+  const symbols = (t) => SYMBOLS.reduce((s, [re, to]) => s.replace(re, to), t);
+
+  // "integral from 0 to 5 of (25 - x^2) dx" -> integral sign with limits. Only where a full integral is written out (it ends in dx, dt, ...);
+  // "the integral exceeds the estimate" or "which integral represents the area" stay as words. "the", "a", "definite" before it are dropped.
+  const INT_WORD = new RegExp(NL + 'integral' + NR, 'gi');
+  const INT_HEAD = /^\s+(?:(?:from\s+)?(\S+(?:\s+\S+)?)\s+to\s+(\S+(?:\s+\S+)?)\s+)?of\s+/;
+  const INT_DIFF = /^[^.?;]{1,110}?\sd[a-z\u03b8]\b/;
+  function findIntegrals(text) {
+    const out = [];
+    let m;
+    INT_WORD.lastIndex = 0;
+    while ((m = INT_WORD.exec(text))) {
+      const rest = text.slice(m.index + m[0].length);
+      const h = INT_HEAD.exec(rest);
+      if (!h) continue;
+      if (h[1] && (/[\[\]]/.test(h[1] + h[2]) || /\bof\b/.test(h[1] + ' ' + h[2]))) continue; // garbled or run-on limits
+      if (!INT_DIFF.test(rest.slice(h[0].length))) continue;
+      const pre = /(?:(?<![A-Za-z])(?:the|an?)\s+)?(?:(?:in)?definite\s+)?$/i.exec(text.slice(0, m.index));
+      out.push({ start: pre ? pre.index : m.index, end: m.index + m[0].length + h[0].length - (h[0].length - h[0].trimEnd().length) , lo: h[1], hi: h[2], skip: m.index + m[0].length + h[0].length });
+    }
+    return out;
+  }
+  const intNode = (lo, hi) => {
+    const n = el('span', { class: 'int' }, el('span', { class: 'isym', text: '\u222b' }));
+    if (lo !== undefined) {
+      const l = el('span', { class: 'ilim' }, el('span', { class: 'hi' }), el('span', { class: 'lo' }));
+      l.children[0].append(supRich(hi)); l.children[1].append(supRich(lo));
+      n.append(l);
+    }
+    return n;
+  };
+
   // "x^2" -> x<sup>2</sup>, "4^(3x+1)" -> 4<sup>3x+1</sup>, "e^-x" -> e<sup>-x</sup>
   function supRich(text) {
     const frag = document.createDocumentFragment();
@@ -19,6 +67,20 @@
     const flush = () => { if (buf) { frag.append(document.createTextNode(buf)); buf = ''; } };
     for (let i = 0; i < text.length; i++) {
       const c = text[i];
+      if (c === 's' && text.startsWith('sqrt(', i) && !/[A-Za-z]/.test(text[i - 1] || '')) { // sqrt(x + 2): radical sign with a bar over the radicand
+        let depth = 0, close = -1;
+        for (let j = i + 4; j < text.length; j++) {
+          if (text[j] === '(') depth++;
+          else if (text[j] === ')' && --depth === 0) { close = j; break; }
+        }
+        if (close > 0) {
+          flush();
+          const rad = el('span', { class: 'rad' });
+          rad.append(supRich(text.slice(i + 5, close)));
+          frag.append(el('span', { class: 'sqrt' }, el('span', { class: 'rt', text: '\u221a' }), rad));
+          i = close; continue;
+        }
+      }
       if (c === '_' && /[A-Za-z]/.test(text[i - 1] || '') && text[i + 1] === '(') { // log_(2e)
         let depth = 0, close = -1;
         for (let j = i + 1; j < text.length; j++) {
@@ -69,7 +131,18 @@
     return t.slice(1, -1);
   };
   function rich(text) {
-    text = text.replace(/<=/g, '\u2264').replace(/>=/g, '\u2265');
+    text = symbols(text.replace(/<=/g, '\u2264').replace(/>=/g, '\u2265'));
+    const ints = findIntegrals(text);
+    if (ints.length) {
+      const f = document.createDocumentFragment();
+      let at = 0;
+      ints.forEach((it) => {
+        f.append(rich(text.slice(at, it.start)), intNode(it.lo, it.hi), ' ');
+        at = it.skip;
+      });
+      f.append(rich(text.slice(at)));
+      return f;
+    }
     const frag = document.createDocumentFragment();
     let last = 0, m;
     const FRAC = new RegExp(FRAC_SRC, 'g'); // per call: rich() recurses

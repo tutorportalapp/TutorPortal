@@ -19,13 +19,13 @@
   const selectedLevels = () => checked('#levels input:checked').map(Number);
 
   function eligible() {
-    const schools = new Set(selectedSchools());
+    const schools = new Set(selectedSchools());   // for school, difficulty and topics, nothing ticked means all
     const topics = new Set(selectedTopics());
     const levels = new Set(selectedLevels());
     const ok = (u) =>
-      schools.has(u.school) &&
+      (schools.size === 0 || schools.has(u.school)) &&
       (topics.size === 0 || u.parts.some((p) => (p.t || []).some((t) => topics.has(t)))) &&
-      levels.has(TPR.level(u));
+      (levels.size === 0 || levels.has(TPR.level(u)));
     const pool = UNITS.filter(ok);
     return { mc: pool.filter((u) => u.sec === 'I'), wr: pool.filter((u) => u.sec === 'II') };
   }
@@ -57,25 +57,31 @@
   function renderChoose() {
     const schools = [...new Set(ROWS.map((r) => r.s))].sort();
     const wanted = new URLSearchParams(location.search).get('school');
-    const box = $('schools');
-    box.innerHTML = '';
-    schools.forEach((s) => {
-      const n = UNITS.filter((u) => u.school === s).length;
-      const inp = el('input', { type: 'checkbox', value: s });
-      inp.checked = !wanted || wanted === s;
-      inp.addEventListener('change', refreshLimits);
-      box.append(el('label', { class: 'fitem' }, el('span', { class: 'l' }, inp, s), el('span', { class: 'n', text: String(n) })));
-    });
-
-    const lv = $('levels');
-    lv.innerHTML = '';
-    for (let d = 1; d <= 5; d++) {
-      const n = UNITS.filter((u) => TPR.level(u) === d).length;
-      const inp = el('input', { type: 'checkbox', value: String(d) });
-      inp.checked = true;
-      inp.addEventListener('change', refreshLimits);
-      lv.append(el('label', { class: 'fitem' }, el('span', { class: 'l' }, inp, TPR.LEVELS[d]), el('span', { class: 'n', text: String(n) })));
-    }
+    // School and difficulty use the same expanding groups as the topics and the Library filters.
+    const filterGroup = (box, title, items, preset) => {
+      box.innerHTML = '';
+      const count = el('small', { text: 'All' });
+      const inner = el('div', { class: 'inner' });
+      const inputs = items.map(([value, label, n]) => {
+        const cb = el('input', { type: 'checkbox', value: String(value) });
+        cb.checked = preset(String(value));
+        cb.addEventListener('change', () => { update(); });
+        inner.append(el('label', { class: 'fitem' }, el('span', { class: 'l' }, cb, label), el('span', { class: 'n', text: String(n) })));
+        return cb;
+      });
+      const update = () => {
+        const k = inputs.filter((c) => c.checked).length;
+        count.textContent = k === 0 ? 'All' : `${k} chosen`;
+        refreshLimits();
+      };
+      const d = el('details', { class: 'group top' }, el('summary', {}, el('span', { class: 't', text: title }), count), inner);
+      box.append(d);
+      const k = inputs.filter((c) => c.checked).length;
+      count.textContent = k === 0 ? 'All' : `${k} chosen`;
+      if (k) { d.open = true; d.classList.add('is-open'); d.querySelector('summary').setAttribute('aria-expanded', 'true'); }
+    };
+    filterGroup($('schools'), 'School', schools.map((s) => [s, s, UNITS.filter((u) => u.school === s).length]), (v) => !!wanted && wanted === v);
+    filterGroup($('levels'), 'Difficulty', [1, 2, 3, 4, 5].map((d) => [d, TPR.LEVELS[d], UNITS.filter((u) => TPR.level(u) === d).length]), () => false);
 
     const topicsBox = $('topics');
     topicsBox.innerHTML = '';
