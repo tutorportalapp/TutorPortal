@@ -29,6 +29,7 @@
       <a href="library.html">Library</a>
       <a href="builder.html">Builder</a>
       <a href="history.html" class="active">History</a>
+      <a href="pricing.html">Pricing</a>
   </nav></div></div>
 </header>
 
@@ -37,6 +38,8 @@
     <p class="eyebrow">Paper history</p>
     <h1 class="h-title">Recently built and completed papers</h1>
     <p class="page-sub">Your saved papers appear here.</p>
+    <div id="proGate" hidden></div>
+    <div id="histBody">
     <div class="toolbar" style="margin:18px 0 8px">
       <button class="btn" id="clrRecent">Clear recent</button>
       <button class="btn" id="clrDone">Clear completed</button>
@@ -49,10 +52,11 @@
     <div class="h-head"><p class="eyebrow">Completed</p><span class="count" id="nDone">0 items</span></div>
     <div id="done" class="h-list"></div>
     <p class="msg" id="msg"></p>
+    </div>
   </section>
 </main>
 
-<footer class="site-footer"><div class="wrap">TutorPortal is an independent tool for tutors and students. Not affiliated with NESA or any school.</div></footer>
+<footer class="site-footer"><div class="wrap">TutorPortal is an independent tool for tutors and students. Not affiliated with NESA or any school. <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></div></footer>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 <script>
@@ -99,7 +103,14 @@
   $('clrRecent').onclick = clear((r) => !r.completed);
   $('clrDone').onclick = clear((r) => r.completed);
   $('clrAll').onclick = clear(() => true);
-  TP.requireLogin().then(() => { $('gate-main').hidden = false; load(); });
+  TP.requireLogin().then(() => TP.plan()).then((pl) => {
+    $('gate-main').hidden = false;
+    if (pl.pro) { load(); return; }
+    $('histBody').hidden = true;
+    const g = $('proGate');
+    g.hidden = false;
+    g.replaceChildren(TPUI.empty('History is a Pro feature', pl.status === 'canceled' || pl.hasCustomer ? 'Your saved papers are kept safe and come back as soon as you resubscribe.' : 'Pro saves every paper you build so you can reprint it later, and lets you mark papers as completed. Free accounts can still print or save any paper as a PDF when they build it.', [{ label: 'Try Pro free for 7 days', href: 'pricing.html', primary: true }, { label: 'Build a paper', href: 'builder.html' }]));
+  });
 </script>
 </body>
 </html>

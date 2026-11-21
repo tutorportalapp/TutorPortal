@@ -110,5 +110,33 @@
     }
   });
 
-  window.TPUI = { toast, empty, reduced };
+  // ---- upgrade / message dialog ----
+  // TPUI.dialog({ title, text, primary: { label, href|onClick }, secondary: 'Not now' })
+  function dialog({ title, text, primary, secondary = 'Not now' }) {
+    const d = document.createElement('dialog');
+    d.className = 'tp-dialog';
+    const h = document.createElement('h2'); h.textContent = title;
+    const p = document.createElement('p'); p.textContent = text;
+    const acts = document.createElement('div'); acts.className = 'tp-dialog-acts';
+    const close = document.createElement('button'); close.className = 'btn'; close.textContent = secondary; close.onclick = () => d.close();
+    if (primary) {
+      const go = primary.href ? Object.assign(document.createElement('a'), { href: primary.href }) : document.createElement('button');
+      go.className = 'btn primary'; go.textContent = primary.label;
+      if (primary.onClick) go.onclick = () => { d.close(); primary.onClick(); };
+      acts.append(go);
+    }
+    acts.append(close);
+    d.append(h, p, acts);
+    d.addEventListener('close', () => d.remove());
+    document.body.append(d);
+    d.showModal();
+  }
+  // The standard "this is a Pro feature" prompt.
+  const proPrompt = (feature) => dialog({
+    title: 'This is a Pro feature',
+    text: `${feature} is part of TutorPortal Pro: $5.99 a month, with a 7-day free trial.`,
+    primary: { label: 'See Pro', href: 'pricing.html' },
+  });
+
+  window.TPUI = { toast, empty, reduced, dialog, proPrompt };
 })();

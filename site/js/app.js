@@ -26,7 +26,9 @@
       (schools.size === 0 || schools.has(u.school)) &&
       (topics.size === 0 || u.parts.some((p) => (p.t || []).some((t) => topics.has(t)))) &&
       (levels.size === 0 || levels.has(TPR.level(u)));
-    const pool = UNITS.filter(ok);
+    let pool = UNITS.filter(ok);
+    if (PRO && $('optExclude').checked) pool = pool.filter((u) => !u.parts.some((p) => USED.has(p.id)));
+    if (PRO && $('optStarred').checked) pool = pool.filter((u) => TP.favs.has('question', u.key));
     return { mc: pool.filter((u) => u.sec === 'I'), wr: pool.filter((u) => u.sec === 'II') };
   }
 
@@ -51,6 +53,7 @@
     const t = (Number($('tTMC').value) || 0) + (Number($('tTWR').value) || 0);
     $('timeTotal').textContent = `Total working time: ${TPR.duration(t)}`;
     $('build').disabled = mc.length + wr.length === 0;
+    if (PRO) $('proNote').textContent = `${USED.size ? USED.size + ' question parts are in your saved papers. ' : ''}${TP.favs.set.question.size} starred ${TP.favs.set.question.size === 1 ? 'question' : 'questions'}.`;
     $('availSummary').textContent = `${mc.length + wr.length} questions match your choices: ${mc.length} multiple choice and ${wr.length} written response.`;
   }
 
@@ -159,7 +162,7 @@
   // ---- history ----
   const keysOf = (c) => ({ mc: c.mc.map((u) => u.key), wr: c.wr.map((u) => u.key), tutor: $('tutor').value, cover: $('optCover').checked, lines: $('optLines').checked, formulas: $('optFormulas').checked });
   async function saveHistory(silent) {
-    if (PREVIEW) return;
+    if (!PRO) return;
     const rec = { title: $('title').value, settings: keysOf(current), question_ids: [...current.mc, ...current.wr].flatMap((u) => u.parts.map((p) => p.id)) };
     try {
       if (currentId) await TP.papers.update(currentId, rec);
@@ -381,12 +384,13 @@
     $('preview').hidden = false; // must be visible so the page heights can be measured
     const wrap = $('pages'), keyWrap = $('keyPages');
     wrap.hidden = false; keyWrap.hidden = false;
+    for (const w of [wrap, keyWrap]) w.classList.toggle('wm', !PRO); // watermark on every free paper and answer key
     wrap.style.zoom = '1'; keyWrap.style.zoom = '1';
     wrap.innerHTML = ''; keyWrap.innerHTML = '';
     const S = stats();
     const tutor = $('tutor').value.trim();
     const title = $('title').value.trim() || 'Mathematics Advanced';
-    const useCover = $('optCover').checked;
+    const useCover = PRO && $('optCover').checked;
     const lines = $('optLines').checked;
 
     // Content blocks in order; headings stay with the question that follows them.
@@ -485,7 +489,18 @@
         try { fn(); } finally { btn.disabled = false; btn.classList.remove('busy'); btn.textContent = old; }
       }, 120));
     };
-    $('build').addEventListener('click', () => run($('build'), 'Building your paper\u2026', () => { currentId = null; generate(); window.scrollTo(0, 0); }));
+    $('build').addEventListener('click', async () => {
+      if (!PREVIEW && !PRO) {
+        const r = await TP.consumeBuild();
+        if (!r.ok) { planBar(r); limitDialog(r); return; }
+        if (r.used != null) planBar(r);
+      }
+      run($('build'), 'Building your paper\u2026', () => { currentId = null; generate(); window.scrollTo(0, 0); });
+    });
+    proOnly($('optCover'), 'The cover page');
+    proOnly($('optExclude'), 'Excluding questions you have already used');
+    proOnly($('optStarred'), 'Building a paper from your starred questions');
+    for (const id of ['optExclude', 'optStarred']) $(id).addEventListener('change', refreshLimits);
     $('reshuffle').addEventListener('click', () => run($('reshuffle'), 'Shuffling\u2026', generate));
     $('back').addEventListener('click', () => {
       $('preview').hidden = true;
@@ -516,7 +531,7 @@
     window.addEventListener('resize', fit);
   }
 
-  let PREVIEW = false;
+  let PREVIEW = false, PRO = false, LOCKED = [], USED = new Set();
   // Logged-out visitors get a fixed sample paper: the 20 questions the sync job marked as preview questions.
   function setupPreview() {
     document.body.classList.add('is-preview');
@@ -530,19 +545,61 @@
     TP.meta().then((m) => { if (m && m.questions) $('previewTotal').textContent = m.questions.toLocaleString('en-AU') + ' questions'; });
   }
 
+  // ---- plans ----
+  // Free accounts (and logged-out visitors): watermark, no cover page, no saved history, 2 papers a week, half the questions.
+  function markFree() {
+    document.body.classList.add('is-free');
+    $('optCover').checked = false;
+    $('complete').hidden = true;
+    if (!PREVIEW) {
+      $('histMsg').innerHTML = 'Free plan: papers are not saved to History. <a href="pricing.html">Upgrade to Pro</a> to keep them.';
+      const n = LOCKED.length;
+      $('planNote').textContent = n ? `${n} more questions are locked on the free plan.` : '';
+    }
+  }
+  function planBar(st) {
+    if (!st || st.pro) { $('planBar').hidden = true; return; }
+    const left = Math.max(0, st.limit - st.used);
+    $('planLeft').textContent = `${left} of ${st.limit} papers left this week`;
+    $('planReset').textContent = `Resets ${TP.fmtResets(st.resets)} (Sydney time).`;
+    $('planBar').hidden = false;
+  }
+  function setupFree() {
+    $('planBar').hidden = false;
+    $('planLeft').textContent = 'Free plan';
+    TP.buildStatus().then(planBar);
+  }
+  function setupPro() {
+    TP.favs.load().catch(() => {});
+    TP.papers.list().then((l) => { USED = new Set(l.flatMap((r) => r.question_ids || [])); refreshLimits(); }).catch(() => {});
+  }
+  const proOnly = (el, what) => el.addEventListener('click', (e) => { if (!PRO) { e.preventDefault(); TPUI.proPrompt(what); } });
+  function limitDialog(r) {
+    TPUI.dialog({
+      title: `You have used your ${r.limit} free papers this week`,
+      text: `Free accounts can build ${r.limit} papers a week. Your allowance resets ${TP.fmtResets(r.resets)} (Sydney time). Pro has no limit.`,
+      primary: { label: 'Try Pro free for 7 days', href: 'pricing.html' },
+      secondary: 'Close',
+    });
+  }
+
   TP.isPreview()
     .then((p) => { PREVIEW = p; return p ? null : TP.requireLogin(); })
-    .then(() => { $('gate-main').hidden = false; if (PREVIEW) setupPreview(); return TP.loadData(); })
+    .then(() => TP.plan())
+    .then((pl) => { PRO = !!pl.pro; $('gate-main').hidden = false; if (PREVIEW) setupPreview(); else if (!PRO) setupFree(); else setupPro(); return TP.loadData(); })
     .then(([rows, diag]) => {
       ROWS = rows;
       DIAG = diag;
       UNITS = TPR.buildUnits(ROWS);
+      LOCKED = UNITS.filter((u) => u.parts[0].locked);
+      UNITS = UNITS.filter((u) => !u.parts[0].locked); // locked questions only appear in the Library; they cannot be built into a paper
+      if (!PRO) markFree();
       if (PREVIEW) TP.metaLine().then((t) => { $('mastStats').textContent = t; }); else TP.stats(ROWS);
       renderChoose();
       wire();
       TP.tutorName().then((n) => { $('tutor').value = n; });
       const open = new URLSearchParams(location.search).get('paper');
-      if (open && !PREVIEW) openSaved(open);
+      if (open && PRO) openSaved(open);
       $('loadMsg').textContent = PREVIEW ? '' : `${UNITS.length} questions from ${new Set(ROWS.map((r) => r.s + r.y)).size} papers`;
       if (PREVIEW) { const mcN = UNITS.filter((u) => u.sec === 'I').length; $('previewCounts').textContent = `${mcN} multiple choice and ${UNITS.length - mcN} written response questions`; }
     })

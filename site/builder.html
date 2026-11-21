@@ -38,6 +38,7 @@
       <a href="library.html">Library</a>
       <a href="builder.html" class="active">Builder</a>
       <a href="history.html">History</a>
+      <a href="pricing.html">Pricing</a>
   </nav></div></div>
 </header>
 
@@ -56,6 +57,10 @@
     <!-- Settings -->
     <section id="choose" class="no-print">
       <h1 class="page-title">Build a Mathematics Advanced practice paper</h1>
+      <div class="preview-banner plan-bar" id="planBar" hidden>
+        <p class="pb-text"><strong id="planLeft">Free plan</strong> <span id="planReset"></span> <span id="planNote"></span> Free papers have a watermark and no cover page, and are not saved.</p>
+        <div class="pb-actions"><a class="btn primary" href="pricing.html">Try Pro free for 7 days</a></div>
+      </div>
       <div class="preview-banner" id="previewBanner" hidden>
         <p class="pb-text"><strong>Get access to <span id="previewTotal">the full question bank</span> by logging in.</strong> You are trying the preview: one sample paper built from a small set of questions.</p>
         <div class="pb-actions"><a class="btn primary" href="login.html?signup=1&amp;next=builder.html">Sign up free</a><a class="btn" href="login.html?next=builder.html">Log in</a></div>
@@ -117,6 +122,14 @@
           <p class="hint" id="timeTotal" style="margin:12px 0 0"></p>
         </div>
       </div>
+      <div class="panel" id="proOpts">
+        <h2>Question pool <span class="pro-tag">Pro</span></h2>
+        <div class="chips">
+          <label class="chip"><input type="checkbox" id="optExclude"> Exclude questions I have already used</label>
+          <label class="chip"><input type="checkbox" id="optStarred"> Only my starred questions</label>
+        </div>
+        <p class="hint" id="proNote" style="margin:10px 0 0"></p>
+      </div>
       </div>
       <div class="bar">
         <span class="msg" id="loadMsg">Loading questions...</span>
@@ -145,7 +158,7 @@
           <button data-v="paper" class="on" aria-pressed="true">Paper</button>
           <button data-v="key" aria-pressed="false">Answer key</button>
         </div>
-        <label class="chip"><input type="checkbox" id="optCover" checked> Cover page</label>
+        <label class="chip"><input type="checkbox" id="optCover" checked> Cover page <span class="pro-tag only-free">Pro</span></label>
         <label class="chip"><input type="checkbox" id="optLines"> Working lines</label>
         <label class="chip"><input type="checkbox" id="optFormulas"> NESA reference sheet</label>
       </div>
@@ -158,7 +171,7 @@
 </div>
 
 
-<footer class="site-footer"><div class="wrap">TutorPortal is an independent tool for tutors and students. Not affiliated with NESA or any school.</div></footer>
+<footer class="site-footer"><div class="wrap">TutorPortal is an independent tool for tutors and students. Not affiliated with NESA or any school. <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></div></footer>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/paper-render.js"></script>

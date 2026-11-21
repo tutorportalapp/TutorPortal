@@ -5,20 +5,21 @@
   const local = ['localhost', '127.0.0.1', ''].includes(location.hostname);
   let client = null;
 
+  let loading = null;
   function load() {
     if (client || !configured) return Promise.resolve(client);
-    return new Promise((resolve, reject) => {
+    // One script load, however many callers ask at once.
+    return (loading ||= new Promise((resolve, reject) => {
       const s = document.createElement('script');
       s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
       s.onload = () => {
         client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
         resolve(client);
       };
-      s.onerror = () => reject(new Error('Could not load the sign-in library.'));
+      s.onerror = () => { loading = null; reject(new Error('Could not load the sign-in library.')); };
       document.head.append(s);
-    });
+    }));
   }
-
 
   // Paper history store: Supabase table saved_papers when connected, localStorage in local demo mode.
   // Record: { id, title, settings:{mc:[unitKey],wr:[unitKey],answers}, completed, created_at, updated_at }
@@ -144,11 +145,16 @@
         const who = document.createElement('span');
         who.className = 'who';
         who.textContent = name;
+        const pl = await TP.plan().catch(() => ({}));
+        const badge = document.createElement('a');
+        badge.href = 'pricing.html';
+        if (pl.pro) { badge.className = 'plan-badge'; badge.textContent = 'Pro'; badge.title = 'Your plan'; }
+        else { badge.className = 'btn primary upgrade-btn'; badge.textContent = 'Upgrade'; }
         const out = document.createElement('button');
         out.className = 'btn';
         out.textContent = 'Log out';
         out.onclick = TP.signOut;
-        slot.append(who, out);
+        slot.append(who, badge, out);
       }
     },
   };
@@ -179,6 +185,13 @@
       const rows = (await page('questions', 'data')).map((r) => r.data);
       const diag = {};
       for (const r of await page('diagrams', 'question_id,figures')) diag[r.question_id] = r.figures;
+      // Free accounts also get a teaser (first ten words) for the questions that are locked to Pro.
+      if (!(await TP.plan()).pro && (await TP.session().catch(() => null))) {
+        try {
+          const have = new Set(rows.map((r) => r.id));
+          for (const r of await page('locked_questions', 'data')) if (!have.has(r.data.id)) rows.push(r.data);
+        } catch {}
+      }
       return [rows, diag];
     }
     return Promise.all([
@@ -186,6 +199,54 @@
       fetch('data/diagrams.json').then((r) => r.json()).catch(() => ({})),
     ]);
   })());
+
+  // ---- Pro plan ----
+  // TP.plan(): { signedIn, pro, status, trialEnd, periodEnd, cancelAtEnd, interval }. Cached; TP.plan(true) refreshes.
+  let planPromise = null;
+  TP.plan = (fresh) => {
+    if (fresh) planPromise = null;
+    return (planPromise ||= (async () => {
+      if (TP.demo) return { signedIn: true, pro: true, status: 'demo' };
+      const s = await TP.session().catch(() => null);
+      if (!s) return { signedIn: false, pro: false, status: null };
+      try {
+        const c = await load();
+        const { data, error } = await c.from('subscriptions').select('*').maybeSingle();
+        if (error) throw error;
+        const manual = data && data.manual_until && new Date(data.manual_until) > new Date();
+        const live = data && ['active', 'trialing'].includes(data.status);
+        return { signedIn: true, pro: !!(live || manual), status: data ? (manual && !live ? 'manual' : data.status) : null,
+          trialEnd: data && data.trial_end, periodEnd: data && data.current_period_end, cancelAtEnd: !!(data && data.cancel_at_period_end),
+          interval: data && data.price_interval, hasCustomer: !!(data && data.stripe_customer_id) };
+      } catch { return { signedIn: true, pro: false, status: null }; }
+    })());
+  };
+  // Free plan allowance: { pro, used, limit, resets }.
+  TP.buildStatus = async () => {
+    try { const c = await load(); const { data, error } = await c.rpc('build_status'); if (error) throw error; return data; }
+    catch { return null; }
+  };
+  // Counts one paper against the free weekly limit. Returns { ok, pro, used, limit, resets }; ok:true if the build may go ahead.
+  TP.consumeBuild = async () => {
+    if (TP.demo) return { ok: true, pro: true };
+    try { const c = await load(); const { data, error } = await c.rpc('consume_build'); if (error) throw error; return data; }
+    catch { return { ok: true, unknown: true }; } // never block a tutor because the counter is unreachable
+  };
+  const callFn = async (name, body) => {
+    const c = await load();
+    const { data, error } = await c.functions.invoke(name, { body });
+    if (error || !data || data.error || !data.url) throw new Error((data && data.error) || 'Could not reach the payment service. Please try again.');
+    location.href = data.url;
+  };
+  // Send the user to Stripe Checkout (interval 'month' | 'year'). Logged-out visitors are sent to sign up first.
+  TP.upgrade = async (interval = 'month') => {
+    const s = await TP.session().catch(() => null);
+    if (!s) { location.href = 'login.html?signup=1&next=' + encodeURIComponent('pricing.html') + '&go=' + interval; return; }
+    await callFn('stripe-checkout', { interval });
+  };
+  TP.manageBilling = () => callFn('stripe-portal', {});
+  const fmtResets = (iso) => new Date(iso).toLocaleString('en-AU', { weekday: 'long', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Australia/Sydney' });
+  TP.fmtResets = fmtResets;
 
   // Top-right masthead line, e.g. "10 PAPERS · 640 QUESTIONS · 2 SCHOOLS".
   TP.stats = (rows) => {

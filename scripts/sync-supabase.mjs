@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { pickPreview } from './pick-preview.mjs';
+import { pickFree } from './pick-free.mjs';
 
 const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
 if (!fs.existsSync('build/questions.json')) { console.log('No build/questions.json. Nothing to sync.'); process.exit(0); }
@@ -47,4 +48,15 @@ try {
   await del('preview_questions', 'id', ids);
   console.log(`Preview set: ${ids.length} question parts.`);
 } catch (e) { console.warn('Could not update the preview set (run supabase/preview.sql?):', e.message); }
+// Free plan: half of the questions are free, the rest are locked (Pro). See supabase/pro.sql.
+try {
+  const prevIds = pickPreview(qs, dg);
+  const { freeIds, locked } = pickFree(qs, prevIds);
+  for (const c of chunks(freeIds.map((id) => ({ id })), 500)) await post('free_questions', c, 'id');
+  await del('free_questions', 'id', freeIds);
+  for (const c of chunks(locked, 200)) await post('locked_questions', c, 'id');
+  if (locked.length) await del('locked_questions', 'id', locked.map((l) => l.id));
+  else await fetch(`${url}/rest/v1/locked_questions?id=neq.`, { method: 'DELETE', headers });
+  console.log(`Free set: ${freeIds.length} question parts free, ${locked.length} locked.`);
+} catch (e) { console.warn('Could not update the free/locked split (run supabase/pro.sql?):', e.message); }
 console.log(`Synced ${qs.length} questions and ${dRows.length} diagram sets to Supabase.`);

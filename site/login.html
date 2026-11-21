@@ -29,6 +29,7 @@
       <a href="library.html">Library</a>
       <a href="builder.html">Builder</a>
       <a href="history.html">History</a>
+      <a href="pricing.html">Pricing</a>
   </nav></div></div>
 </header>
 
@@ -64,7 +65,9 @@
 <script>
   const $ = (id) => document.getElementById(id);
   const next = new URLSearchParams(location.search).get('next') || 'builder.html';
-  const dest = /^[\w-]+\.html$/.test(next) ? next : 'builder.html';
+  const go = new URLSearchParams(location.search).get('go');
+  const base = /^[\w-]+\.html$/.test(next) ? next : 'builder.html';
+  const dest = base + (base === 'pricing.html' && /^(month|year)$/.test(go || '') ? '?go=' + go : ''); // carries on to checkout after signing up
   let signup = false;
   const say = (t) => { $('msg').textContent = t; };
 

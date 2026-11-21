@@ -5,10 +5,11 @@
   const PAGE = 10;
   const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg>';
 
+  const LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   const moduleOf = {};
   for (const [m, ts] of Object.entries(TP.MODULES)) ts.forEach((t) => (moduleOf[t] = m));
 
-  let DIAG = {}, UNITS = [], PAPERS = [];
+  let DIAG = {}, UNITS = [], PAPERS = [], PRO = false;
   const f = { school: new Set(), year: new Set(), topic: new Set(), level: new Set(), type: new Set(), star: false, text: '', view: 'papers', sort: 'school', page: 0 };
   let openKey = null;
   let rank = null; // Map unitKey -> random number while shuffled
@@ -22,6 +23,7 @@
       u.topics = TPR.topicsOf(u);
       u.subs = TPR.subtopicsOf(u);
       u.marks = TPR.totalMarks(u);
+      u.locked = !!u.parts[0].locked;
       u.modules = new Set(u.topics.map((t) => moduleOf[t]).filter(Boolean));
       u.search = `${u.school} ${u.year} ${u.topics.join(' ')} ${u.subs.join(' ')} ${u.parts.map((p) => p.x).join(' ')}`.toLowerCase();
     });
@@ -107,8 +109,10 @@
   function starBtn(kind, key, what) {
     const b = el('button', { class: 'star' + (TP.favs.has(kind, key) ? ' on' : ''), type: 'button', 'aria-label': `Star ${what}`, title: 'Star', 'aria-pressed': String(TP.favs.has(kind, key)) });
     b.innerHTML = STAR;
+    if (!PRO) b.classList.add('pro-locked');
     b.addEventListener('click', async (e) => {
       e.stopPropagation();
+      if (!PRO) { TPUI.proPrompt('Starring papers and questions'); return; }
       const on = await TP.favs.toggle(kind, key);
       b.classList.toggle('on', on);
       b.setAttribute('aria-pressed', String(on));
@@ -191,10 +195,18 @@
     const tags = el('div', { class: 'qc-tags' });
     u.topics.forEach((t) => tags.append(el('span', { class: 'badge topic', text: t })));
     tags.append(dots);
-    return el('article', { class: 'qcard' },
+    const body = u.locked
+      ? el('div', { class: 'qpaper qlocked' },
+          el('p', { class: 'teaser', text: u.parts[0].x || '' }),
+          el('div', { class: 'lock-bar' },
+            (() => { const s = el('span', { class: 'lk' }); s.innerHTML = LOCK; return s; })(),
+            el('span', { class: 'lt', text: 'Locked. Upgrade to Pro to see the full question and add it to a paper.' }),
+            el('a', { class: 'btn primary', href: 'pricing.html', text: 'Unlock with Pro' })))
+      : el('div', { class: 'qpaper' }, TPR.renderUnit(u, null, DIAG));
+    return el('article', { class: 'qcard' + (u.locked ? ' locked' : '') },
       el('div', { class: 'qc-head' }, meta, starBtn('question', u.key, `${u.school} ${u.year} ${TPR.partLabel(u)}`)),
       tags,
-      el('div', { class: 'qpaper' }, TPR.renderUnit(u, null, DIAG)));
+      body);
   }
 
   function drawQuestions() {
@@ -248,7 +260,7 @@
   };
 
   function wire() {
-    $('starBox').addEventListener('click', () => { f.star = !f.star; setStarBox(); f.page = 0; draw(); });
+    $('starBox').addEventListener('click', () => { if (!PRO) { TPUI.proPrompt('Starring and filtering to your starred questions'); return; } f.star = !f.star; setStarBox(); f.page = 0; draw(); });
     $('q').addEventListener('input', () => { f.text = $('q').value; f.page = 0; draw(); });
     $('sort').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { f.sort = b.dataset.s; draw(); } });
     $('view').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { f.view = b.dataset.v; f.page = 0; draw(); } });
@@ -266,11 +278,20 @@
       TP.meta().then((m) => { if (m && m.questions) $('loTotal').textContent = m.questions.toLocaleString('en-AU') + ' past-paper questions'; });
       return new Promise(() => {});
     })
-    .then(() => { $('gate-main').hidden = false; $('libSearch').hidden = false; $('libIntro').hidden = false; return Promise.all([TP.loadData(), TP.favs.load()]); })
+    .then(() => TP.plan())
+    .then((pl) => {
+      PRO = !!pl.pro;
+      $('gate-main').hidden = false; $('libSearch').hidden = false; $('libIntro').hidden = false;
+      return Promise.all([TP.loadData(), PRO ? TP.favs.load() : null]);
+    })
     .then(([[rows, diag]]) => {
       DIAG = diag;
       prepare(rows);
-      TP.stats(rows);
+      TP.stats(rows.filter((r) => !r.locked).concat(rows.filter((r) => r.locked)));
+      if (!PRO) {
+        const n = UNITS.filter((u) => u.locked).length;
+        if (n) { $('libPlan').hidden = false; $('libPlanText').textContent = `You are on the free plan, so ${n} of the ${UNITS.length} questions are locked. They show the first ten words only.`; }
+      }
       fillFilters();
       wire();
       const qs = new URLSearchParams(location.search);
